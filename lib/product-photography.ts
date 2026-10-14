@@ -1,0 +1,7 @@
+import assets from './cap-photo-assets.json';
+export const capPhotos=assets.map(asset=>({src:`/photos/caps/${asset.file}`,small:`/photos/caps/${asset.file.replace('.webp','-384.webp')}`,width:asset.width,height:asset.height,alt:asset.file==='adult-1.webp'?'Black Exclusive Apparel cap photographed on its own':asset.file.startsWith('women')?'Woman wearing a black Exclusive Apparel cap':asset.file.startsWith('kids')?'Child wearing a black Exclusive Apparel cap':'Adult wearing a black Exclusive Apparel cap'}));
+export const capMain=capPhotos.find(p=>p.src.endsWith('/adult-1.webp'))!;
+export const collectionPhotos={Men:capPhotos.find(p=>p.src.endsWith('/adult-3.webp'))!,Women:capPhotos.find(p=>p.src.endsWith('/women-1.webp'))!,Kids:capPhotos.find(p=>p.src.endsWith('/kids-2.webp'))!};
+export function photoDetails(src:string){return capPhotos.find(p=>p.src===src);}
+/** Upgrade legacy demo media without overwriting photographs uploaded by the owner. */
+export function withProductPhotography<T extends {id:string;image:string;gallery?:string[]}>(product:T):T&{photography?:boolean}{if(product.id!=='everyday-cap')return product;if(product.image===capMain.src)return {...product,photography:true};if(!['/products/everyday-cap.svg','/products/everyday-cap.webp'].includes(product.image))return product;const ownerGallery=(product.gallery||[]).filter(src=>!src.startsWith('/products/everyday-cap.')&&!capPhotos.some(p=>p.src===src));return {...product,image:capMain.src,gallery:[...capPhotos.map(p=>p.src),...ownerGallery],photography:true};}

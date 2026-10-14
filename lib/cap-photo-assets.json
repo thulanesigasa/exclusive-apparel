@@ -1,0 +1,79 @@
+[
+  {
+    "file": "adult-1.webp",
+    "width": 768,
+    "height": 1365,
+    "fullBytes": 93626,
+    "smallBytes": 19124
+  },
+  {
+    "file": "adult-2.webp",
+    "width": 768,
+    "height": 1365,
+    "fullBytes": 42548,
+    "smallBytes": 11466
+  },
+  {
+    "file": "adult-3.webp",
+    "width": 768,
+    "height": 1365,
+    "fullBytes": 49812,
+    "smallBytes": 13584
+  },
+  {
+    "file": "adult-4.webp",
+    "width": 768,
+    "height": 1365,
+    "fullBytes": 38868,
+    "smallBytes": 13570
+  },
+  {
+    "file": "kids-1.webp",
+    "width": 768,
+    "height": 1376,
+    "fullBytes": 62702,
+    "smallBytes": 16070
+  },
+  {
+    "file": "kids-2.webp",
+    "width": 768,
+    "height": 1376,
+    "fullBytes": 73262,
+    "smallBytes": 18124
+  },
+  {
+    "file": "kids-3.webp",
+    "width": 768,
+    "height": 1376,
+    "fullBytes": 53366,
+    "smallBytes": 14464
+  },
+  {
+    "file": "women-1.webp",
+    "width": 768,
+    "height": 1376,
+    "fullBytes": 124190,
+    "smallBytes": 32524
+  },
+  {
+    "file": "women-2.webp",
+    "width": 768,
+    "height": 1376,
+    "fullBytes": 66832,
+    "smallBytes": 18598
+  },
+  {
+    "file": "women-3.webp",
+    "width": 768,
+    "height": 1376,
+    "fullBytes": 72170,
+    "smallBytes": 19898
+  },
+  {
+    "file": "women-4.webp",
+    "width": 768,
+    "height": 1376,
+    "fullBytes": 57034,
+    "smallBytes": 17796
+  }
+]
