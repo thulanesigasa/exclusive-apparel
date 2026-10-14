@@ -11,3 +11,6 @@ dist/
 .vinext/
 
 supabase/.temp/
+
+# Agent local directory
+.agents/
