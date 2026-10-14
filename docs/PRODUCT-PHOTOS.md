@@ -13,3 +13,5 @@ Original PNGs: 14,445,836 bytes. All full-size and responsive WebPs combined: 92
 `lib/product-photography.ts` upgrades only the Everyday Cap's legacy demo image paths when reading the catalogue from D1. This ensures already-seeded inventory uses the new media. Owner-uploaded primary images and explicitly saved galleries are preserved. The admin editor accepts the new paths and up to 20 gallery images.
 
 Browser interaction/visual QA was unavailable in this managed environment. Type checking, automated catalogue/editing tests, production build, and hosted page/API/asset checks verify the implementation within that limit.
+
+Hosting limitation: this host's static-asset service currently labels WebP responses as `application/octet-stream`, even when Worker-first asset routing and a Worker MIME override are configured. The files still contain valid WebP data. Hosted verification checks the actual format, HTTP availability and SHA-256 equality against every committed full-size and responsive image, rather than claiming that the host's MIME label has been corrected. A provider-side MIME correction remains desirable, particularly for direct image navigation.
