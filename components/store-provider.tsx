@@ -2,6 +2,7 @@
 import {createContext,useContext,useEffect,useState,useCallback,useMemo} from 'react';
 import dynamic from 'next/dynamic';
 import {products as initialProducts} from '@/lib/catalog';
+import {availableFor} from '@/lib/availability.mjs';
 import {normalizeCart,keyOf,MAX_QUANTITY,type CartItem} from '@/lib/cart.mjs';
 import {defaultSettings,type StoreProduct,type StoreSettings} from '@/lib/store-types';
 const BagDrawer=dynamic(()=>import('./bag-drawer').then(module=>module.BagDrawer),{ssr:false});
@@ -15,8 +16,8 @@ export function StoreProvider({children}:{children:React.ReactNode}){
  useEffect(()=>{let active=true;void(async()=>{let saved:unknown=[];try{saved=JSON.parse(localStorage.getItem('exclusive-cart-v1')||'[]');}catch{}try{const response=await fetch('/api/catalogue?limit=100');const data:any=response.ok?await response.json():null;const catalogue:StoreProduct[]=data?.products||initialProducts;if(active){setProducts(catalogue);setItems(normalizeCart(saved,catalogue));}}catch{if(active)setItems(normalizeCart(saved,initialProducts));}finally{if(active)setReady(true);}void refresh();})();return()=>{active=false;};},[refresh]);
  useEffect(()=>{if(ready)try{localStorage.setItem('exclusive-cart-v1',JSON.stringify(items));}catch{}},[items,ready]);
  useEffect(()=>{if(!message)return;const t=setTimeout(()=>setMessage(''),3000);return()=>clearTimeout(t);},[message]);
- const add=useCallback((item:CartItem)=>{setItems(old=>normalizeCart([...old,item],products));setMessage('Added to your bag');},[products]);
- const update=useCallback((key:string,n:number)=>setItems(old=>old.flatMap(i=>keyOf(i)!==key?[i]:n<=0?[]:[{...i,quantity:Math.min(MAX_QUANTITY,Math.floor(n))}])),[]);
+ const add=useCallback((item:CartItem)=>{const p=products.find(p=>p.id===item.productId);if(!p)return;const stock=availableFor(p,item.size,item.color);if(stock===0){setMessage('This size and colour are out of stock');return;}setItems(old=>normalizeCart([...old,item],products).map(i=>keyOf(i)===keyOf(item)&&stock!==null?{...i,quantity:Math.min(i.quantity,stock)}:i));setMessage('Added to your bag');},[products]);
+ const update=useCallback((key:string,n:number)=>setItems(old=>old.flatMap(i=>keyOf(i)!==key?[i]:n<=0?[]:[{...i,quantity:Math.min(MAX_QUANTITY,Math.floor(n),Math.max(1,availableFor(products.find(p=>p.id===i.productId)!,i.size,i.color)??MAX_QUANTITY))}])),[products]);
  const value=useMemo(()=>({items,ready,add,update,clear,message,bagOpen,openBag,closeBag,products,settings,live,refresh}),[items,ready,add,update,clear,message,bagOpen,openBag,closeBag,products,settings,live,refresh]);
  return <Context.Provider value={value}>{children}{bagOpen&&<BagDrawer/>}<div className={`toast ${message?'visible':''}`} role="status" aria-live="polite">{message}</div></Context.Provider>;
 }

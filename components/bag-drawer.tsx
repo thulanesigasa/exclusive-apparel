@@ -3,6 +3,7 @@ import {useEffect,useRef} from 'react';
 import Link from 'next/link';
 import {ArrowUpRight,Minus,Plus,ShoppingBag,X} from 'lucide-react';
 import {money} from '@/lib/catalog';
+import {availableFor} from '@/lib/availability.mjs';
 import {keyOf,subtotal,MAX_QUANTITY} from '@/lib/cart.mjs';
 import {useStore} from './store-provider';
 
@@ -10,6 +11,7 @@ export function BagDrawer(){
  const {items,update,ready,closeBag,products}=useStore();
  const dialogRef=useRef<HTMLDialogElement>(null);
  const closeRef=useRef<HTMLButtonElement>(null);
+ const invalidStock=items.some(i=>{const p=products.find(p=>p.id===i.productId);if(!p)return true;const available=availableFor(p,i.size,i.color);return available!==null&&i.quantity>available;});
  const count=items.reduce((sum,item)=>sum+item.quantity,0);
  useEffect(()=>{
   const dialog=dialogRef.current;
@@ -34,13 +36,13 @@ export function BagDrawer(){
      const key=keyOf(item);
      return <article className="cart-item drawer-item" key={key}>
       <Link href={`/product/${p.id}/`} onClick={closeBag}><img src={p.image} width="90" height="99" alt={p.name}/></Link>
-      <div><Link href={`/product/${p.id}/`} onClick={closeBag}><h3>{p.name}</h3></Link><p>{item.color} / {item.size}</p><div className="quantity"><button type="button" aria-label={`Decrease ${p.name} quantity`} onClick={()=>update(key,item.quantity-1)}><Minus size={14}/></button><span aria-live="polite">{item.quantity}</span><button type="button" disabled={item.quantity>=MAX_QUANTITY} aria-label={`Increase ${p.name} quantity`} onClick={()=>update(key,item.quantity+1)}><Plus size={14}/></button></div></div>
+      <div><Link href={`/product/${p.id}/`} onClick={closeBag}><h3>{p.name}</h3></Link><p>{item.color} / {item.size}</p><div className="quantity"><button type="button" aria-label={`Decrease ${p.name} quantity`} onClick={()=>update(key,item.quantity-1)}><Minus size={14}/></button><span aria-live="polite">{item.quantity}</span><button type="button" disabled={item.quantity>=Math.min(MAX_QUANTITY,availableFor(p,item.size,item.color)??MAX_QUANTITY)} aria-label={`Increase ${p.name} quantity`} onClick={()=>update(key,item.quantity+1)}><Plus size={14}/></button></div></div>
       <div className="cart-item-end"><strong>{money(p.price*item.quantity)}</strong><button type="button" aria-label={`Remove ${p.name}`} onClick={()=>update(key,0)}><X size={18}/></button></div>
      </article>;
     }):<div className="empty bag-empty"><ShoppingBag size={38}/><h3>Your everyday starts here.</h3><p>Your bag is waiting for its first essential.</p><button type="button" className="button dark" onClick={closeBag}>Continue shopping <ArrowUpRight size={18}/></button></div>}
    </div>
    <div className="bag-summary">
-    {ready&&items.length>0&&<><div className="bag-subtotal"><span>Subtotal</span><strong>{money(subtotal(items,products))}</strong></div><p className="bag-delivery">Delivery to be confirmed.</p><Link href="/checkout/" className="button dark bag-checkout" onClick={closeBag}>Checkout <ArrowUpRight size={18}/></Link><button type="button" className="bag-continue" onClick={closeBag}>Continue shopping</button></>}
+    {ready&&items.length>0&&<><div className="bag-subtotal"><span>Subtotal</span><strong>{money(subtotal(items,products))}</strong></div><p className="bag-delivery">Delivery to be confirmed.</p>{invalidStock?<><p role="alert" className="stock-warning">An item or quantity is unavailable. Remove it or choose another variant before checkout.</p><button className="button dark bag-checkout" disabled>Checkout unavailable</button></>:<Link href="/checkout/" className="button dark bag-checkout" onClick={closeBag}>Checkout <ArrowUpRight size={18}/></Link>}<button type="button" className="bag-continue" onClick={closeBag}>Continue shopping</button></>}
     <p className="sample-note" id="bag-notice">Development preview · Sample prices. Live orders and payments are not yet available.</p>
    </div>
   </div>

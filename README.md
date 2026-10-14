@@ -28,3 +28,5 @@ Generate append-only database migrations with `npm run db:generate`; inventory g
 CI tests cart integrity, validation/shipping, authorization, server totals, checkout idempotency, private order access, rollback, concurrent last-unit purchase, fulfilment, reservation expiry and disabled live integrations. It then compiles and checks types. Browser QA and actual provider sandbox/production payments remain separate launch checks.
 
 See [commerce configuration](docs/COMMERCE.md), [implementation plan](docs/PLAN.md) and [launch checklist](docs/LAUNCH.md).
+
+The footer groups Explore, Good to know and Legal. Support/policy pages contain fuller editable content and an FAQ/measurement guide at `/size-guide/`. A contact inbox and order-linked size exchange requests are managed in the dashboard’s Requests tab. Real garment measurements remain pending until supplied by the owner. Returns/terms defaults are working drafts and preserve applicable statutory rights; business details, voluntary exchange terms and approved policies still need owner confirmation before live sales.

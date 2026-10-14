@@ -46,3 +46,13 @@ node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1
 ```
 
 Do not replay applied migrations or edit their SQL/metadata. Tests use isolated SQLite databases and the same schema/trigger SQL. The existing build helper packages the Worker, client assets and migrations for hosted deployment.
+
+## Support and exchanges
+
+Contact enquiries are stored in `support_requests` and visible only to authorised staff. A delivered-order holder can request a size exchange with the private order key and an item belonging to that order. The request does not approve eligibility, reserve replacement stock, dispatch a parcel or process a refund. Staff review it and record response/instructions through submitted → reviewing → approved → return_received → replacement_arranged → resolved (or decline at review). Order-linked replies appear on the private tracking page. General enquiry replies are internal records; staff must contact the customer separately at their listed email. The form explicitly states that it does not send automatic confirmation email.
+
+## Verified sizing and availability
+
+The owner can enter structured centimetre measurements per product size. Tee charts require garment chest circumference and length; pants require garment waist circumference and inseam; headwear requires a head-fit minimum and maximum. All variant sizes must have measurements before a chart can be marked verified. New approvals for live-sale products require a verified chart. No sample dimensions are generated. Existing free-text measurements remain supplementary notes, not a verified table.
+
+Unavailable or absent size/colour pairs are disabled; sold-out products show a badge. Bag controls respect known stock and block checkout when the saved quantity is unavailable. The server remains authoritative when stock changes. Guest checkout explicitly states that no store customer account is needed; hosting sign-in for this private preview is separate.
