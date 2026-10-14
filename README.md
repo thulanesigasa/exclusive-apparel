@@ -310,7 +310,7 @@ Key environment variables:
 
 | Command | Purpose |
 | :--- | :--- |
-| `npm run dev` | Launch the local development server via Vinext on `http://localhost:3000` |
+| `npm run dev` | Launch the local development server via Vinext on `http://localhost:5174` |
 | `npm run build` | Compile the application for Cloudflare Workers (`dist/server` and `dist/client`) |
 | `npm run typecheck` | Execute TypeScript compiler check without emitting output |
 | `npm test` | Run the complete automated test suite (35 unit and integration tests) |
