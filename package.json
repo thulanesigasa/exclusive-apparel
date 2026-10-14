@@ -8,7 +8,8 @@
     "typecheck": "tsc --noEmit",
     "test": "node --test tests/*.test.mjs && node --import tsx --test tests/*.test.ts",
     "db:generate": "drizzle-kit generate",
-    "images:optimize": "node scripts/optimize-store-images.mjs"
+    "images:optimize": "node scripts/optimize-store-images.mjs",
+    "postinstall": "node scripts/patch-lucide.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.117.3",
