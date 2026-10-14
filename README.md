@@ -8,8 +8,8 @@ Node 22+ and npm. `npm ci`, `npm run dev`. Verify with `npm test`, `npm run buil
 
 ## Included
 
-- Responsive home, shop, collection filters, 250 ms debounced search, sorting and pagination.
-- Pre-rendered product routes, size/colour selection, persistent local bag, quantity controls and review route.
+- Home-first desktop/mobile navigation, responsive home, shop, collection filters, 250 ms debounced search, sorting and pagination.
+- Pre-rendered product routes, size/colour selection, persistent local bag, a sliding shopping bag sidebar, quantity controls and review route.
 - Input validation for corrupted bag storage, variant matching and quantity caps. Prices come from catalogue data, never saved bag values.
 - Original logo in WebP, favicon/Apple/app icons and a web manifest. Platform-generated splash behavior; no artificial splash screen delaying content.
 - Metadata, canonical URLs, Open Graph, Product JSON-LD without invented offer/stock ratings, sitemap and robots. Cart/review excluded from indexing.

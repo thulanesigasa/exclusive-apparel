@@ -1,16 +1,21 @@
 'use client';
 import {createContext,useContext,useEffect,useState,useCallback, useMemo} from 'react';
+import dynamic from 'next/dynamic';
 import {products} from '@/lib/catalog';
 import {normalizeCart,keyOf,MAX_QUANTITY,type CartItem} from '@/lib/cart.mjs';
-const Context=createContext<{items:CartItem[];ready:boolean;add:(i:CartItem)=>void;update:(key:string,n:number)=>void;message:string}>({items:[],ready:false,add:()=>{},update:()=>{},message:''});
+const BagDrawer = dynamic(() => import('./bag-drawer').then(module => module.BagDrawer), {ssr:false});
+const Context=createContext<{items:CartItem[];ready:boolean;add:(i:CartItem)=>void;update:(key:string,n:number)=>void;message:string;bagOpen:boolean;openBag:()=>void;closeBag:()=>void}>({items:[],ready:false,add:()=>{},update:()=>{},message:'',bagOpen:false,openBag:()=>{},closeBag:()=>{}});
 export function StoreProvider({children}:{children:React.ReactNode}){
  const [items,setItems]=useState<CartItem[]>([]),[ready,setReady]=useState(false),[message,setMessage]=useState('');
+ const [bagOpen,setBagOpen]=useState(false);
+ const openBag=useCallback(()=>setBagOpen(true),[]);
+ const closeBag=useCallback(()=>setBagOpen(false),[]);
  useEffect(()=>{try{setItems(normalizeCart(JSON.parse(localStorage.getItem('exclusive-cart-v1')||'[]'),products));}catch{}setReady(true);},[]);
  useEffect(()=>{if(ready)try{localStorage.setItem('exclusive-cart-v1',JSON.stringify(items));}catch{}},[items,ready]);
  useEffect(()=>{if(!message)return;const t=setTimeout(()=>setMessage(''),3000);return()=>clearTimeout(t);},[message]);
  const add=useCallback((item:CartItem)=>{setItems(old=>normalizeCart([...old,item],products));setMessage('Added to your bag');},[]);
  const update=useCallback((key:string,n:number)=>setItems(old=>old.flatMap(i=>keyOf(i)!==key?[i]:n<=0?[]:[{...i,quantity:Math.min(MAX_QUANTITY,Math.floor(n))}])),[]);
- const value=useMemo(()=>({items,ready,add,update,message}),[items,ready,add,update,message]);
- return <Context.Provider value={value}>{children}<div className={`toast ${message?'visible':''}`} role="status" aria-live="polite">{message}</div></Context.Provider>;
+ const value=useMemo(()=>({items,ready,add,update,message,bagOpen,openBag,closeBag}),[items,ready,add,update,message,bagOpen,openBag,closeBag]);
+ return <Context.Provider value={value}>{children}{bagOpen&&<BagDrawer/>}<div className={`toast ${message?'visible':''}`} role="status" aria-live="polite">{message}</div></Context.Provider>;
 }
 export const useStore=()=>useContext(Context);
