@@ -228,6 +228,7 @@ exclusive-apparel/
 |   |-- connector-preview/             Local development proxy and host bindings
 |   |-- finalize-worker.mjs            Build step finalizing Cloudflare Worker output
 |   |-- optimize-store-images.mjs      Sharp image compression script
+|   |-- patch-lucide.mjs               Hotfix script for upstream icon export typos
 |   |-- run-framework.mjs              Vinext development server runner
 |   `-- sites-env.mjs                  Environment loader for Wrangler and D1 CLI
 |-- server/                            Cloudflare Worker server endpoints
@@ -315,6 +316,7 @@ Key environment variables:
 | `npm test` | Run the complete automated test suite (35 unit and integration tests) |
 | `npm run db:generate` | Generate append-only Drizzle SQL migrations for Cloudflare D1 |
 | `npm run images:optimize` | Optimize and compress catalog images to WebP format using Sharp |
+| `npm run postinstall` | Automatically apply icon export compatibility patches |
 
 ### Applying Local Database Migrations
 
