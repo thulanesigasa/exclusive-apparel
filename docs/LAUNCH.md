@@ -1,24 +1,19 @@
-# Performance, SEO and launch
+# Performance, SEO and launch checks
 
-## Implemented now
-Static export moves catalogue page rendering out of request time. Every product has a generated HTML route, title, description and canonical URL. A sitemap enumerates routes. Duplicate filter combinations canonicalize to the shop; transactional routes are noindex. Product structured data identifies the brand and product without implying sample offers are available.
+## Current architecture
 
-Next builds minified JavaScript/CSS and route-specific chunks. Below-fold images load lazily; hero and product detail images load eagerly. Intrinsic dimensions reserve image space. Logo is compressed WebP; apparel illustrations are vector SVG. No external font, analytics or non-critical script dependency. Search is debounced 250 ms, filtering is memoized and catalogue results paginate at eight products. Route loading provides skeletons. Cart and checkout are separate route bundles.
+Server-rendered Next-compatible routes run on Vinext/Workers. Public catalogue/settings APIs declare bounded cache lifetimes; authenticated admin, orders and payment responses are no-store. Product/variant records load in two batched queries, with React request memoization for server page/metadata reads. Database indexes cover product category/audience, SKU/variant choices, order status/date and item/event lookup. Current catalogue limits are documented in COMMERCE.md; they are not an unlimited search service.
 
-## Hosting configuration (required on the chosen host)
-Serve hashed `/_next/static/` assets with `Cache-Control: public, max-age=31536000, immutable`. Give HTML short or revalidation-based caching so catalogue updates appear promptly. Version or invalidate public image assets when they change; do not mark unversioned paths immutable. Enable Brotli/gzip and CDN delivery with automatic TLS. Verify host response headers and compression after deployment; these are host capabilities, not claims about an unconfigured server. Configure CSP after testing Next's inline hydration scripts, plus nosniff and a suitable referrer policy. Private Sites previews are access-controlled and are not public SEO launches.
+Routes have metadata, canonicals and Product schema; sitemap reads the active database catalogue. Transactional/admin/order routes are noindex and excluded from robots. Product photos have dimensions, lazy loading below the fold, gallery/zoom support and browser-side resize/WebP encoding before upload. Random R2 media URLs have immutable caching. Build output includes minified chunks. Search remains debounced; route loading has skeletons and the bag drawer is lazy-loaded.
 
-Static CDN delivery needs no application load balancer. If a dynamic backend is added, use managed horizontal runtime scaling and a provider-managed load balancer; do not install one solely to satisfy a checklist.
+## Host verification
 
-## When APIs and a database are added
-- Cache public product/category GET responses at the edge with a bounded TTL, ETag and stale-while-revalidate; invalidate after staff updates. Keep authenticated/customer, order and payment responses `private, no-store`.
-- Cache expensive public aggregations by a normalized filter/version key. Bound cardinality, monitor hit ratio and expire or invalidate on mutations. Never cache stock reservations as authoritative stock.
-- Fetch product variants/media in one joined/batched query; do not query once per product. Index foreign keys and actual filter/sort columns. Inspect query plans on representative data, and paginate in SQL with stable cursor ordering.
-- Select only necessary API fields, cap result/page sizes and let the gateway compress JSON. Use full text search when catalogue growth justifies it. Current client pagination loads all 12 sample products; it is not a large-catalogue database strategy.
-- Revalidate stock/price during server checkout, using transactions and idempotent webhook handlers. Do not use client-side caches or local storage for authoritative commerce decisions.
+Configure and measure CDN caching/Brotli/gzip, TLS and production security headers on the final host. Never publicly cache order/customer responses. Stock/price validation bypasses client caches at checkout. Use managed scaling rather than introducing an unnecessary standalone load balancer. Evaluate Core Web Vitals with real photography and a production domain; no score is claimed without measurement.
 
-## Remaining launch inputs
-Actual products/photos, prices, stock by SKU, final domain, business/support identity, payment gateway account, courier and delivery rules, return terms, privacy notice and customer service process. No live checkout until these are integrated and end-to-end payment/stock/refund flows are tested.
+## Launch gates
 
-## QA
-CI tests storage corruption, invalid variants, quantity caps, variant separation and totals, then compiles all static pages and checks types. Browser verification should cover mobile menu, keyboard focus, navigation, zero-result search, filter combinations, sort, pagination, size requirement, variant bag merging, refresh persistence, removal and empty checkout. Measure Core Web Vitals with real product photography and production CDN headers; no performance scores are claimed without measurement.
+Keep the preview private and in test mode until actual products, prices/stock, business/support details, approved policies and real courier rules are supplied. Gateway/email credentials are absent. Verify a publicly reachable signed callback, merchant sandbox scenarios, order reconciliation/refunds and real email delivery before live mode. Add unattended reservation expiry and notification retry scheduling, error/uptime monitoring, database/media backups and restore procedures. Browser/mobile/keyboard/visual QA remains outstanding in this execution environment.
+
+## Automated verification
+
+Tests cover malformed bag storage, item variants, shipping thresholds/coverage, owner API authorization, server-derived totals, idempotency, private order token enforcement, transaction rollback, last-unit concurrent purchases, cancellation restocking, fulfillment transitions and missing integration credentials. The build compiles the Worker and client routes; types are checked separately. These do not substitute for provider sandbox and browser tests.

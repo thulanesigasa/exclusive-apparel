@@ -1,0 +1,2 @@
+export async function api(path:string,options:RequestInit={}){const response=await fetch(path,{...options,headers:{...(options.body instanceof FormData?{}:{'Content-Type':'application/json'}),...options.headers}});let data:any;try{data=await response.json();}catch{throw new Error('The server returned an unexpected response.');}if(!response.ok)throw new Error(data.error||'Request failed.');return data;}
+export const cents=(value:number)=>new Intl.NumberFormat('en-ZA',{style:'currency',currency:'ZAR'}).format(value/100);

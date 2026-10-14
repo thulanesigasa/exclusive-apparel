@@ -4,3 +4,8 @@ out/
 .env*
 !.env.example
 *.tsbuildinfo
+
+dist/
+.wrangler/
+.sites-runtime/
+.vinext/

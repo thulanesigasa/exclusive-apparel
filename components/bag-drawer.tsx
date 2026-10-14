@@ -2,12 +2,12 @@
 import {useEffect,useRef} from 'react';
 import Link from 'next/link';
 import {ArrowUpRight,Minus,Plus,ShoppingBag,X} from 'lucide-react';
-import {products,money} from '@/lib/catalog';
+import {money} from '@/lib/catalog';
 import {keyOf,subtotal,MAX_QUANTITY} from '@/lib/cart.mjs';
 import {useStore} from './store-provider';
 
 export function BagDrawer(){
- const {items,update,ready,closeBag}=useStore();
+ const {items,update,ready,closeBag,products}=useStore();
  const dialogRef=useRef<HTMLDialogElement>(null);
  const closeRef=useRef<HTMLButtonElement>(null);
  const count=items.reduce((sum,item)=>sum+item.quantity,0);

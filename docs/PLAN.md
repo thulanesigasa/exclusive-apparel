@@ -1,15 +1,13 @@
-# Store development plan
+# Store implementation plan
 
-## 1. Brand and experience — implemented
-Use the uploaded crown logo. Black/white identity with muted olive and warm paper backgrounds. Editorial home page, inclusive collection navigation and a clear path from catalogue to product to bag. Responsive layouts and keyboard-accessible controls.
+## Implemented
 
-## 2. Catalogue and browsing — implemented with sample data
-T-shirts, caps, track pants, sweatpants and beanies, across men, women, unisex and kids. Product pages, variants, debounced search, sort and eight-item pagination. Local bag persists by variant; checkout review explicitly identifies the preview state.
+The eight commerce priorities now have application surfaces and server support: owner dashboard, durable catalogue/stock, guest checkout and gateway adapters, editable delivery/collection rules, order history/fulfilment/private tracking, notification outbox/email adapter, product photo/detail fields, and business/support/policy pages. The private deployment runs in test mode. Import sample data in the owner dashboard to exercise order/stock flows. Product galleries accept the owner's real photos when available.
 
-## 3. Commerce backend — next implementation stage
-Choose the payment gateway and hosting/runtime with the owner. Use a relational catalogue (products, variants, inventory, media), customers, orders, order items and payment events. A server creates orders by looking up current variant prices and reserving stock atomically; never trust client totals. A hosted payment page reduces exposure of payment data. Verify signed webhooks, persist idempotency keys and reconcile provider outcomes before confirming orders. Implement expiry/release of reservations, transactional inventory adjustment and fulfilment status. Add rate limits and validated request payloads. Store customer details only once required policies and operational ownership exist.
+## Complete before live sales
 
-Build an authenticated staff catalogue/order interface with role enforcement and an audit trail. Finalize tax, shipping zones, courier integration, returns and email notifications. No production backend, database, credentials or payment gateway has been provisioned by this implementation.
+Approve actual product descriptions, photos, fabric/care details and measurements, prices, SKU inventory, business identity/support contact, returns and privacy/terms policies, delivery areas and courier rates. Add payment/email credentials in hosted runtime settings. Arrange a public callback and final domain. Test actual merchant sandbox payments, cancellation, late/duplicate notifications, reconciliation/refunds, email delivery, fulfilment and customer support. Configure unattended reservation/outbox maintenance, production monitoring/backups and browser/accessibility verification before public trading.
 
-## 4. Launch
-Replace concepts with actual product photography, approved product names, fabric/care details, exact sizes, SKU-level inventory and prices. Add legal business identity, support details and reviewed store/privacy policies. Configure final domain and gateway, test sandbox payments and refunds, accessibility, mobile browsers, order fulfilment and security. Publish public commerce only when these gates pass.
+## Later enhancements
+
+Optional customer accounts, wishlists, verified reviews, promotions, courier label APIs, automated stock alerts, customer self-service returns and staff auditing/roles. Add SQL cursor/full-text catalogue pagination as inventory expands past the current bounded batched reader.
