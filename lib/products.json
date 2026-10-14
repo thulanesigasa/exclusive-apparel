@@ -5,7 +5,7 @@
     "category": "T-shirts",
     "audience": "Men",
     "price": 349,
-    "image": "/products/signature-tee.svg",
+    "image": "/photos/apparel/men-tees-1.webp",
     "color": "#262626",
     "sizes": [
       "XS",
@@ -20,7 +20,14 @@
       "Black"
     ],
     "description": "A clean silhouette, an easy fit, and the Exclusive Apparel crown. The signature tee is designed to make everyday dressing feel considered.",
-    "badge": "New drop"
+    "badge": "New drop",
+    "gallery": [
+      "/photos/apparel/men-tees-1.webp",
+      "/photos/apparel/men-tees-2.webp",
+      "/photos/apparel/men-tees-3.webp",
+      "/photos/apparel/men-tees-4.webp",
+      "/photos/apparel/men-tees-5.webp"
+    ]
   },
   {
     "id": "everyday-cap",
@@ -28,7 +35,7 @@
     "category": "Caps",
     "audience": "Unisex",
     "price": 229,
-    "image": "/products/everyday-cap.svg",
+    "image": "/photos/caps/adult-1.webp",
     "color": "#c5bca9",
     "sizes": [
       "One size"
@@ -38,7 +45,20 @@
       "Black"
     ],
     "description": "A clean silhouette, an easy fit, and the Exclusive Apparel crown. The everyday cap is designed to make everyday dressing feel considered.",
-    "badge": "New drop"
+    "badge": "New drop",
+    "gallery": [
+      "/photos/caps/adult-1.webp",
+      "/photos/caps/adult-2.webp",
+      "/photos/caps/adult-3.webp",
+      "/photos/caps/adult-4.webp",
+      "/photos/caps/kids-1.webp",
+      "/photos/caps/kids-2.webp",
+      "/photos/caps/kids-3.webp",
+      "/photos/caps/women-1.webp",
+      "/photos/caps/women-2.webp",
+      "/photos/caps/women-3.webp",
+      "/photos/caps/women-4.webp"
+    ]
   },
   {
     "id": "relaxed-sweatpants",
@@ -46,7 +66,7 @@
     "category": "Sweatpants",
     "audience": "Women",
     "price": 499,
-    "image": "/products/relaxed-sweatpants.svg",
+    "image": "/photos/apparel/sweatpants-1.webp",
     "color": "#d6d0c4",
     "sizes": [
       "XS",
@@ -61,7 +81,15 @@
       "Black"
     ],
     "description": "A clean silhouette, an easy fit, and the Exclusive Apparel crown. The relaxed sweatpants is designed to make everyday dressing feel considered.",
-    "badge": "New drop"
+    "badge": "New drop",
+    "gallery": [
+      "/photos/apparel/sweatpants-1.webp",
+      "/photos/apparel/sweatpants-2.webp",
+      "/photos/apparel/sweatpants-3.webp",
+      "/photos/apparel/sweatpants-4.webp",
+      "/photos/apparel/sweatpants-5.webp",
+      "/photos/apparel/sweatpants-6.webp"
+    ]
   },
   {
     "id": "crown-beanie",
@@ -69,7 +97,7 @@
     "category": "Beanies",
     "audience": "Unisex",
     "price": 199,
-    "image": "/products/crown-beanie.svg",
+    "image": "/photos/apparel/beanies-1.webp",
     "color": "#353630",
     "sizes": [
       "One size"
@@ -79,7 +107,13 @@
       "Black"
     ],
     "description": "A clean silhouette, an easy fit, and the Exclusive Apparel crown. The crown beanie is designed to make everyday dressing feel considered.",
-    "badge": "New drop"
+    "badge": "New drop",
+    "gallery": [
+      "/photos/apparel/beanies-1.webp",
+      "/photos/apparel/beanies-2.webp",
+      "/photos/apparel/beanies-3.webp",
+      "/photos/apparel/beanies-4.webp"
+    ]
   },
   {
     "id": "boxy-tee",
@@ -87,7 +121,7 @@
     "category": "T-shirts",
     "audience": "Women",
     "price": 329,
-    "image": "/products/boxy-tee.svg",
+    "image": "/photos/apparel/women-tees-1.webp",
     "color": "#e4e0d7",
     "sizes": [
       "XS",
@@ -102,7 +136,14 @@
       "Black"
     ],
     "description": "A clean silhouette, an easy fit, and the Exclusive Apparel crown. The boxy tee is designed to make everyday dressing feel considered.",
-    "badge": null
+    "badge": null,
+    "gallery": [
+      "/photos/apparel/women-tees-1.webp",
+      "/photos/apparel/women-tees-2.webp",
+      "/photos/apparel/women-tees-3.webp",
+      "/photos/apparel/women-tees-4.webp",
+      "/photos/apparel/women-tees-5.webp"
+    ]
   },
   {
     "id": "track-pants",
@@ -110,7 +151,7 @@
     "category": "Track pants",
     "audience": "Men",
     "price": 549,
-    "image": "/products/track-pants.svg",
+    "image": "/photos/apparel/trackpants-1.webp",
     "color": "#292b29",
     "sizes": [
       "XS",
@@ -125,7 +166,12 @@
       "Black"
     ],
     "description": "A clean silhouette, an easy fit, and the Exclusive Apparel crown. The track pants is designed to make everyday dressing feel considered.",
-    "badge": null
+    "badge": null,
+    "gallery": [
+      "/photos/apparel/trackpants-1.webp",
+      "/photos/apparel/trackpants-2.webp",
+      "/photos/apparel/trackpants-3.webp"
+    ]
   },
   {
     "id": "junior-tee",
@@ -133,124 +179,25 @@
     "category": "T-shirts",
     "audience": "Kids",
     "price": 249,
-    "image": "/products/junior-tee.svg",
+    "image": "/photos/apparel/kids-tees-1.webp",
     "color": "#b3bdab",
     "sizes": [
-      "4\u20135",
-      "6\u20137",
-      "8\u20139",
-      "10\u201311",
-      "12\u201313"
+      "4–5",
+      "6–7",
+      "8–9",
+      "10–11",
+      "12–13"
     ],
     "colors": [
       "Original",
       "Black"
     ],
     "description": "A clean silhouette, an easy fit, and the Exclusive Apparel crown. The junior crown tee is designed to make everyday dressing feel considered.",
-    "badge": null
-  },
-  {
-    "id": "junior-joggers",
-    "name": "Junior Joggers",
-    "category": "Sweatpants",
-    "audience": "Kids",
-    "price": 349,
-    "image": "/products/junior-joggers.svg",
-    "color": "#aaa9a4",
-    "sizes": [
-      "4\u20135",
-      "6\u20137",
-      "8\u20139",
-      "10\u201311",
-      "12\u201313"
-    ],
-    "colors": [
-      "Original",
-      "Black"
-    ],
-    "description": "A clean silhouette, an easy fit, and the Exclusive Apparel crown. The junior joggers is designed to make everyday dressing feel considered.",
-    "badge": null
-  },
-  {
-    "id": "heavyweight-tee",
-    "name": "Heavyweight Tee",
-    "category": "T-shirts",
-    "audience": "Men",
-    "price": 399,
-    "image": "/products/heavyweight-tee.svg",
-    "color": "#9b9c86",
-    "sizes": [
-      "XS",
-      "S",
-      "M",
-      "L",
-      "XL",
-      "XXL"
-    ],
-    "colors": [
-      "Original",
-      "Black"
-    ],
-    "description": "A clean silhouette, an easy fit, and the Exclusive Apparel crown. The heavyweight tee is designed to make everyday dressing feel considered.",
-    "badge": null
-  },
-  {
-    "id": "sport-cap",
-    "name": "Sport Cap",
-    "category": "Caps",
-    "audience": "Unisex",
-    "price": 249,
-    "image": "/products/sport-cap.svg",
-    "color": "#272727",
-    "sizes": [
-      "One size"
-    ],
-    "colors": [
-      "Original",
-      "Black"
-    ],
-    "description": "A clean silhouette, an easy fit, and the Exclusive Apparel crown. The sport cap is designed to make everyday dressing feel considered.",
-    "badge": null
-  },
-  {
-    "id": "wide-leg-sweats",
-    "name": "Wide Leg Sweats",
-    "category": "Sweatpants",
-    "audience": "Women",
-    "price": 529,
-    "image": "/products/wide-leg-sweats.svg",
-    "color": "#8e9087",
-    "sizes": [
-      "XS",
-      "S",
-      "M",
-      "L",
-      "XL",
-      "XXL"
-    ],
-    "colors": [
-      "Original",
-      "Black"
-    ],
-    "description": "A clean silhouette, an easy fit, and the Exclusive Apparel crown. The wide leg sweats is designed to make everyday dressing feel considered.",
-    "badge": null
-  },
-  {
-    "id": "junior-beanie",
-    "name": "Junior Beanie",
-    "category": "Beanies",
-    "audience": "Kids",
-    "price": 179,
-    "image": "/products/junior-beanie.svg",
-    "color": "#bfb59e",
-    "sizes": [
-      "One size"
-    ],
-    "colors": [
-      "Original",
-      "Black"
-    ],
-    "description": "A clean silhouette, an easy fit, and the Exclusive Apparel crown. The junior beanie is designed to make everyday dressing feel considered.",
-    "badge": null
+    "badge": null,
+    "gallery": [
+      "/photos/apparel/kids-tees-1.webp",
+      "/photos/apparel/kids-tees-2.webp",
+      "/photos/apparel/kids-tees-3.webp"
+    ]
   }
 ]

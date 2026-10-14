@@ -32,3 +32,9 @@ The six additional uploaded archives supply 26 photographs, committed as 52 WebP
 Collection cards and banners now use the corresponding T-shirt photos. Legacy seeded database records receive the same media as the fallback catalogue; owner-selected replacement images and galleries remain editable and are preserved. These media assignments do not confirm fit, fabric, available colours, size measurements, stock or prices. Photos were not assigned to the distinct Heavyweight Tee, Wide Leg Sweats, Junior Joggers or Junior Beanie without matching product references.
 
 Catalogue integration tests cover each group, gallery persistence and owner replacements. Production build and TypeScript checks are required before publication. Browser interaction and mobile visual QA remain unavailable in this environment. The previously recorded native hosting MIME limitation also applies to these static WebP files.
+
+## Final catalogue handoff
+
+At the owner's request, the five unphotographed entries were removed: Junior Beanie, Junior Joggers, Heavyweight Tee, Wide Leg Sweats, and Sport Cap. The seven remaining starter products have supplied primary photos and galleries directly in `lib/products.json`. Obsolete media for those five withdrawn entries was removed from the repository. Server catalogue and checkout guards also block old database records for these IDs. Migration `0004_retire-unphotographed-products.sql` marks existing rows inactive while preserving historical order/variant references; apply it on the owner's final database deployment.
+
+This final change is GitHub-only. No new website publication was requested. The previously published private Sites preview still requires manual removal because the available Sites connector has no unpublish/delete operation. No custom domains were attached. The Supabase project and database data have not been deleted.

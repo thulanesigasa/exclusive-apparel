@@ -34,3 +34,9 @@ The footer groups Explore, Good to know and Legal. Support/policy pages contain 
 SEO now includes clean collection routes, canonical/meta/OG metadata, a current sitemap, robots, schema, HTTPS response handling and both `/llm.txt` and `/llms.txt`. See [SEO verification and limits](docs/SEO.md). Core Web Vitals are measured locally in the browser; no performance score is claimed. Private hosting still blocks public search crawling until an authorised public launch.
 
 Customer account security and activation: [docs/SECURITY.md](docs/SECURITY.md). Accounts are optional and provider activation remains pending; guest checkout works independently.
+
+## Owner deployment handoff
+
+The final starter catalogue contains seven products with supplied photographs: Signature Tee, Everyday Cap, Relaxed Sweatpants, Crown Beanie, Boxy Tee, Track Pants and Junior Crown Tee. Five unphotographed entries were withdrawn; apply `drizzle/0004_retire-unphotographed-products.sql` alongside the existing D1 migrations. Catalogue and checkout guards also block legacy withdrawn entries. Product pricing, variants, measurements and inventory still require owner confirmation before live orders.
+
+Final changes are saved to GitHub only; further automatic publication is not requested. Remove the earlier owner-private preview manually through Sites' project controls (the connector does not expose unpublish/delete). Set `NEXT_PUBLIC_SITE_URL` to the final HTTPS domain before building; replace the fallback origin in `lib/seo.mjs` for any consumers that use its default. Follow `docs/LAUNCH.md` and `docs/SECURITY.md` for payment, delivery, email, auth and production checks. Commerce uses Cloudflare D1/R2; Supabase currently handles customer authentication/profiles. Keep runtime secrets outside GitHub.
