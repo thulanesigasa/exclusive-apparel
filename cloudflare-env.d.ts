@@ -1,6 +1,7 @@
 declare namespace Cloudflare {
   interface Env {
     DB?: D1Database;
+    ASSETS?: Fetcher;
     SUPABASE_URL?: string;
     SUPABASE_PUBLISHABLE_KEY?: string;
     AUTH_SESSION_KEY?: string;
