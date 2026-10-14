@@ -1,4 +1,7 @@
 -- Customer account data uses Supabase Auth identity; no service-role bypass.
+create schema if not exists private;
+revoke all on schema private from public, anon, authenticated;
+
 create table public.customer_profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   full_name text not null default '' check (char_length(full_name) <= 100),
@@ -16,7 +19,7 @@ create policy customer_profile_insert on public.customer_profiles
 create policy customer_profile_update on public.customer_profiles
   for update to authenticated using ((select auth.uid()) = id)
   with check ((select auth.uid()) = id);
-create function public.create_customer_profile() returns trigger
+create function private.create_customer_profile() returns trigger
   language plpgsql security definer set search_path = '' as $$
 begin
   insert into public.customer_profiles (id, full_name)
@@ -24,6 +27,6 @@ begin
   return new;
 end;
 $$;
-revoke all on function public.create_customer_profile() from public, anon, authenticated;
+revoke all on function private.create_customer_profile() from public, anon, authenticated;
 create trigger exclusive_customer_created after insert on auth.users
-  for each row execute function public.create_customer_profile();
+  for each row execute function private.create_customer_profile();
