@@ -1,3 +1,4 @@
+import {pageMetadata} from '@/lib/metadata';
 import Link from 'next/link';
-export const metadata={title:'Our story',alternates:{canonical:'/about/'}};
+export const metadata=pageMetadata('/about/');
 export default function About(){return <section className="section prose"><p className="eyebrow">EXCLUSIVE APPAREL</p><h1>The crown is<br/>for everyone.</h1><p className="lead">Exclusive is a way of showing up. Your style, your energy, your everyday.</p><p>We’re building a home for easy-to-wear apparel across men’s, women’s and kids’ collections. From the tee you reach for first to the cap that finishes the fit, our collection puts everyday style at the centre.</p><div className="values"><div><span>01</span><h2>Your own style</h2><p>Wear what feels like you.</p></div><div><span>02</span><h2>Everyday essentials</h2><p>A rotation built around your life.</p></div><div><span>03</span><h2>One shared crown</h2><p>Men, women, kids. Everyone belongs.</p></div></div><Link className="button dark" href="/shop/">Find your fit ↗</Link></section>;}

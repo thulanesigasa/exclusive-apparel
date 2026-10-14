@@ -9,3 +9,5 @@ dist/
 .wrangler/
 .sites-runtime/
 .vinext/
+
+supabase/.temp/

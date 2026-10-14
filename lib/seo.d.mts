@@ -1,0 +1,9 @@
+export const siteOrigin:string;
+export const publicPages:{path:string;title:string;description:string}[];
+export const privatePaths:string[];
+export function isPrivatePath(path:string):boolean;
+export function absoluteUrl(path:string,origin?:string):string;
+export function jsonLd(value:unknown):string;
+export function breadcrumbSchema(name:string,path:string,origin?:string):any;
+export function productSchema(product:any,options?:{origin?:string;live?:boolean}):any;
+export function normalizePublicPath(path:string):string;

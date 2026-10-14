@@ -1,5 +1,6 @@
-export const dynamic = 'force-dynamic';
 import type {MetadataRoute} from 'next';
 import {siteUrl} from '@/lib/catalog';
+import {publicPages,absoluteUrl} from '@/lib/seo.mjs';
 import {storeProducts} from '@/server/catalogue';
-export default async function sitemap():Promise<MetadataRoute.Sitemap>{const products=await storeProducts();return ['','/shop','/about','/help','/size-guide','/privacy','/contact','/returns','/delivery','/terms',...products.map(p=>`/product/${p.id}`)].map(path=>({url:`${siteUrl}${path}/`,changeFrequency:'weekly' as const,priority:path===''?1:path.startsWith('/product')?0.8:0.6}));}
+export const dynamic='force-dynamic';
+export default async function sitemap():Promise<MetadataRoute.Sitemap>{const products=await storeProducts();return [...publicPages.map(p=>({url:absoluteUrl(p.path,siteUrl)})),...products.map(p=>({url:absoluteUrl(`/product/${p.id}/`,siteUrl),...(p.updatedAt&&!Number.isNaN(Date.parse(p.updatedAt))?{lastModified:new Date(p.updatedAt)}:{})}))];}

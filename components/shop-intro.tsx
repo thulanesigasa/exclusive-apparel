@@ -1,0 +1,1 @@
+export function ShopIntro({audience='All'}:{audience?:string}){return <div className="shop-intro"><p className="eyebrow">THE EVERYDAY COLLECTION</p><h1>{audience==='All'?'Your next everyday favourite.':`${audience}’s apparel.`}</h1><p>Caps to cuffs. Find your fit, wear your crown.</p></div>;}

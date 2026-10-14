@@ -1,0 +1,4 @@
+'use client';
+import {useEffect} from 'react';
+declare global {interface Window{__exclusiveVitals?:Record<string,{name:string;value:number;rating:string;navigationType:string}>;}}
+export function WebVitals(){useEffect(()=>{let cancelled=false;const timer=setTimeout(()=>{void import('web-vitals').then(({onCLS,onINP,onLCP})=>{if(cancelled)return;const report=(metric:{name:string;value:number;rating:string;navigationType:string})=>{const summary={name:metric.name,value:metric.value,rating:metric.rating,navigationType:metric.navigationType};window.__exclusiveVitals={...window.__exclusiveVitals,[metric.name]:summary};window.dispatchEvent(new CustomEvent('exclusive:vital',{detail:summary}));};onCLS(report,{reportAllChanges:true});onINP(report,{reportAllChanges:true});onLCP(report,{reportAllChanges:true});});},1500);return()=>{cancelled=true;clearTimeout(timer);};},[]);return null;}

@@ -1,3 +1,4 @@
+import {pageMetadata} from '@/lib/metadata';
 import {SupportPage} from '@/components/support-page';
-export const metadata={title:'Help & sizing',alternates:{canonical:'/help/'}};
+export const metadata=pageMetadata('/help/');
 export default function Page(){return <SupportPage kind='help'/>;}

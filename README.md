@@ -30,3 +30,7 @@ CI tests cart integrity, validation/shipping, authorization, server totals, chec
 See [commerce configuration](docs/COMMERCE.md), [implementation plan](docs/PLAN.md) and [launch checklist](docs/LAUNCH.md).
 
 The footer groups Explore, Good to know and Legal. Support/policy pages contain fuller editable content and an FAQ/measurement guide at `/size-guide/`. A contact inbox and order-linked size exchange requests are managed in the dashboard’s Requests tab. Real garment measurements remain pending until supplied by the owner. Returns/terms defaults are working drafts and preserve applicable statutory rights; business details, voluntary exchange terms and approved policies still need owner confirmation before live sales.
+
+SEO now includes clean collection routes, canonical/meta/OG metadata, a current sitemap, robots, schema, HTTPS response handling and both `/llm.txt` and `/llms.txt`. See [SEO verification and limits](docs/SEO.md). Core Web Vitals are measured locally in the browser; no performance score is claimed. Private hosting still blocks public search crawling until an authorised public launch.
+
+Customer account security and activation: [docs/SECURITY.md](docs/SECURITY.md). Accounts are optional and provider activation remains pending; guest checkout works independently.
