@@ -1,0 +1,4 @@
+import Link from 'next/link';
+import {ArrowUpRight} from 'lucide-react';
+import {money,type Product} from '@/lib/catalog';
+export function ProductCard({product:p,priority=false}:{product:Product;priority?:boolean}){return <article className="product-card"><Link href={`/product/${p.id}/`} className="product-image">{p.badge&&<span className="badge">{p.badge}</span>}<img src={p.image} alt={`${p.name} — illustrated sample`} width="500" height="550" loading={priority?'eager':'lazy'} decoding="async"/><span className="quick-view">View product <ArrowUpRight size={16}/></span></Link><div className="product-info"><div><span className="eyebrow">{p.audience} / {p.category}</span><Link href={`/product/${p.id}/`}><h3>{p.name}</h3></Link></div><span>{money(p.price)}</span></div><div className="swatches"><span style={{background:p.color}}/><span style={{background:'#222'}}/><small>2 colours</small></div></article>;}

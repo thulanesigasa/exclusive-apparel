@@ -1,0 +1,7 @@
+'use client';
+import Link from 'next/link';
+import {Search,ShoppingBag,Menu,X,ArrowUpRight} from 'lucide-react';
+import {useState} from 'react';
+import {usePathname} from 'next/navigation';
+import {useStore} from './store-provider';
+export function Header(){const {items,ready}=useStore(),[open,setOpen]=useState(false),path=usePathname();return <><div className="announcement">EXCLUSIVE BY NAME. EVERYDAY BY NATURE. <Link href="/shop/">Explore the collection <ArrowUpRight size={12}/></Link></div><header className="header"><Link href="/" className="brand" aria-label="Exclusive Apparel home"><img src="/logo.webp" alt="Exclusive Apparel" width="100" height="80"/></Link><nav aria-label="Main navigation" className={open?'nav open':'nav'}>{['All','Men','Women','Kids'].map(a=><Link className={path==='/shop/'&&a==='All'?'active':''} key={a} href={a==='All'?'/shop/':`/shop/?audience=${a}`} onClick={()=>setOpen(false)}>{a==='All'?'Shop all':a}</Link>)}<Link href="/about/" onClick={()=>setOpen(false)}>Our story</Link></nav><div className="header-actions"><Link href="/shop/?search=true" aria-label="Search products"><Search size={21}/></Link><Link href="/cart/" className="bag-link" aria-label={`Shopping bag, ${ready?items.reduce((s,i)=>s+i.quantity,0):0} items`}><ShoppingBag size={21}/><span>{ready?items.reduce((s,i)=>s+i.quantity,0):0}</span></Link><button className="mobile-toggle" aria-label={open?'Close menu':'Open menu'} aria-expanded={open} onClick={()=>setOpen(!open)}>{open?<X/>:<Menu/>}</button></div></header></>;}

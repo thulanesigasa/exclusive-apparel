@@ -1,0 +1,256 @@
+[
+  {
+    "id": "signature-tee",
+    "name": "Signature Tee",
+    "category": "T-shirts",
+    "audience": "Men",
+    "price": 349,
+    "image": "/products/signature-tee.svg",
+    "color": "#262626",
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "colors": [
+      "Original",
+      "Black"
+    ],
+    "description": "A clean silhouette, an easy fit, and the Exclusive Apparel crown. The signature tee is designed to make everyday dressing feel considered.",
+    "badge": "New drop"
+  },
+  {
+    "id": "everyday-cap",
+    "name": "Everyday Cap",
+    "category": "Caps",
+    "audience": "Unisex",
+    "price": 229,
+    "image": "/products/everyday-cap.svg",
+    "color": "#c5bca9",
+    "sizes": [
+      "One size"
+    ],
+    "colors": [
+      "Original",
+      "Black"
+    ],
+    "description": "A clean silhouette, an easy fit, and the Exclusive Apparel crown. The everyday cap is designed to make everyday dressing feel considered.",
+    "badge": "New drop"
+  },
+  {
+    "id": "relaxed-sweatpants",
+    "name": "Relaxed Sweatpants",
+    "category": "Sweatpants",
+    "audience": "Women",
+    "price": 499,
+    "image": "/products/relaxed-sweatpants.svg",
+    "color": "#d6d0c4",
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "colors": [
+      "Original",
+      "Black"
+    ],
+    "description": "A clean silhouette, an easy fit, and the Exclusive Apparel crown. The relaxed sweatpants is designed to make everyday dressing feel considered.",
+    "badge": "New drop"
+  },
+  {
+    "id": "crown-beanie",
+    "name": "Crown Beanie",
+    "category": "Beanies",
+    "audience": "Unisex",
+    "price": 199,
+    "image": "/products/crown-beanie.svg",
+    "color": "#353630",
+    "sizes": [
+      "One size"
+    ],
+    "colors": [
+      "Original",
+      "Black"
+    ],
+    "description": "A clean silhouette, an easy fit, and the Exclusive Apparel crown. The crown beanie is designed to make everyday dressing feel considered.",
+    "badge": "New drop"
+  },
+  {
+    "id": "boxy-tee",
+    "name": "Boxy Tee",
+    "category": "T-shirts",
+    "audience": "Women",
+    "price": 329,
+    "image": "/products/boxy-tee.svg",
+    "color": "#e4e0d7",
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "colors": [
+      "Original",
+      "Black"
+    ],
+    "description": "A clean silhouette, an easy fit, and the Exclusive Apparel crown. The boxy tee is designed to make everyday dressing feel considered.",
+    "badge": null
+  },
+  {
+    "id": "track-pants",
+    "name": "Track Pants",
+    "category": "Track pants",
+    "audience": "Men",
+    "price": 549,
+    "image": "/products/track-pants.svg",
+    "color": "#292b29",
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "colors": [
+      "Original",
+      "Black"
+    ],
+    "description": "A clean silhouette, an easy fit, and the Exclusive Apparel crown. The track pants is designed to make everyday dressing feel considered.",
+    "badge": null
+  },
+  {
+    "id": "junior-tee",
+    "name": "Junior Crown Tee",
+    "category": "T-shirts",
+    "audience": "Kids",
+    "price": 249,
+    "image": "/products/junior-tee.svg",
+    "color": "#b3bdab",
+    "sizes": [
+      "4\u20135",
+      "6\u20137",
+      "8\u20139",
+      "10\u201311",
+      "12\u201313"
+    ],
+    "colors": [
+      "Original",
+      "Black"
+    ],
+    "description": "A clean silhouette, an easy fit, and the Exclusive Apparel crown. The junior crown tee is designed to make everyday dressing feel considered.",
+    "badge": null
+  },
+  {
+    "id": "junior-joggers",
+    "name": "Junior Joggers",
+    "category": "Sweatpants",
+    "audience": "Kids",
+    "price": 349,
+    "image": "/products/junior-joggers.svg",
+    "color": "#aaa9a4",
+    "sizes": [
+      "4\u20135",
+      "6\u20137",
+      "8\u20139",
+      "10\u201311",
+      "12\u201313"
+    ],
+    "colors": [
+      "Original",
+      "Black"
+    ],
+    "description": "A clean silhouette, an easy fit, and the Exclusive Apparel crown. The junior joggers is designed to make everyday dressing feel considered.",
+    "badge": null
+  },
+  {
+    "id": "heavyweight-tee",
+    "name": "Heavyweight Tee",
+    "category": "T-shirts",
+    "audience": "Men",
+    "price": 399,
+    "image": "/products/heavyweight-tee.svg",
+    "color": "#9b9c86",
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "colors": [
+      "Original",
+      "Black"
+    ],
+    "description": "A clean silhouette, an easy fit, and the Exclusive Apparel crown. The heavyweight tee is designed to make everyday dressing feel considered.",
+    "badge": null
+  },
+  {
+    "id": "sport-cap",
+    "name": "Sport Cap",
+    "category": "Caps",
+    "audience": "Unisex",
+    "price": 249,
+    "image": "/products/sport-cap.svg",
+    "color": "#272727",
+    "sizes": [
+      "One size"
+    ],
+    "colors": [
+      "Original",
+      "Black"
+    ],
+    "description": "A clean silhouette, an easy fit, and the Exclusive Apparel crown. The sport cap is designed to make everyday dressing feel considered.",
+    "badge": null
+  },
+  {
+    "id": "wide-leg-sweats",
+    "name": "Wide Leg Sweats",
+    "category": "Sweatpants",
+    "audience": "Women",
+    "price": 529,
+    "image": "/products/wide-leg-sweats.svg",
+    "color": "#8e9087",
+    "sizes": [
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL",
+      "XXL"
+    ],
+    "colors": [
+      "Original",
+      "Black"
+    ],
+    "description": "A clean silhouette, an easy fit, and the Exclusive Apparel crown. The wide leg sweats is designed to make everyday dressing feel considered.",
+    "badge": null
+  },
+  {
+    "id": "junior-beanie",
+    "name": "Junior Beanie",
+    "category": "Beanies",
+    "audience": "Kids",
+    "price": 179,
+    "image": "/products/junior-beanie.svg",
+    "color": "#bfb59e",
+    "sizes": [
+      "One size"
+    ],
+    "colors": [
+      "Original",
+      "Black"
+    ],
+    "description": "A clean silhouette, an easy fit, and the Exclusive Apparel crown. The junior beanie is designed to make everyday dressing feel considered.",
+    "badge": null
+  }
+]
