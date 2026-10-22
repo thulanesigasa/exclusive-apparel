@@ -1,0 +1,5 @@
+import {pageMetadata} from '@/lib/metadata';
+import {WaitlistForm} from '@/components/waitlist-form';
+import {products} from '@/lib/catalog';
+export const metadata=pageMetadata('/waitlist/');
+export default async function Waitlist({searchParams}:{searchParams:Promise<{product?:string}>}){const {product}=await searchParams,p=products.find(p=>p.id===product);return <section className="section waitlist-page"><div><p className="eyebrow">THE FIRST CHAPTER IS COMING</p><h1>Your crown.<br/>Your first look.</h1><p className="lead">Our first collection is in the making. Join the waiting list for news when Exclusive Apparel is ready to launch.</p><p>Men. Women. Kids. Everyday essentials, with a shared attitude.</p><p className="sample-note">Online shopping is not open yet. Product previews show the direction of our collection; final styles, colours and sizing will be confirmed at launch.</p></div><div className="waitlist-panel"><p className="eyebrow">BE PART OF THE BEGINNING</p><h2>Stay in the know.</h2><WaitlistForm productId={p?.id} productName={p?.name}/></div></section>;}

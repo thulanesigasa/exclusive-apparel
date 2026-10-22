@@ -1,3 +1,5 @@
+> Current release is the price-free waiting-list preview. Follow [WAITLIST-LAUNCH.md](WAITLIST-LAUNCH.md) for its deployment and verification. Commerce launch gates below apply when sales open later.
+
 # Performance, SEO and launch checks
 
 ## Current architecture

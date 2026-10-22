@@ -36,6 +36,13 @@
       "when": 1791993251818,
       "tag": "0004_retire-unphotographed-products",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1792660700098,
+      "tag": "0005_launch-waitlist",
+      "breakpoints": true
     }
   ]
 }

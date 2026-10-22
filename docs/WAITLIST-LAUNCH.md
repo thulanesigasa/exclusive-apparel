@@ -1,0 +1,38 @@
+# Exclusive Apparel: waiting-list launch
+
+This release is a price-free collection preview, not an open store. The seven photographed products remain visible. Visitors can join the waiting list without an account. Purchases, payment initiation, customer signups and the old commerce-management APIs are blocked in pre-launch mode. The supplied product images and logo remain in the repository.
+
+## Deploy yourself
+
+Changes are GitHub-only as requested. Nothing in this update was deployed to Sites, and no audience or domain settings were changed. The existing private preview, if retained, still runs its older version. This application uses a Cloudflare Worker and **D1** for waiting-list storage; a static-only host will not save signups. Supabase is not needed for this waiting-list release.
+
+1. Install the locked dependencies with `npm ci` (Node 22.13 or later). Configure your final HTTPS origin as `NEXT_PUBLIC_SITE_URL` in the build environment. This is also the canonical/sitemap/OG origin; do not launch with the example or old preview URL.
+2. Create or select the production Cloudflare D1 database named `exclusive-apparel`, and set its real UUID as `D1_DATABASE_ID` in the build environment. The all-zero fallback in Vite is for local development only. Production binds this database as `DB`.
+3. Keep **both** `NEXT_PUBLIC_STOREFRONT_MODE=waitlist` (build) and `STOREFRONT_MODE=waitlist` (Worker runtime). Keep `STORE_MODE=test`. The switches default to waiting-list mode; never set `store` to test a waiting-list launch. Keep customer auth disabled. Payment/email keys are not required for collecting signups.
+4. Run `npm run typecheck`, `npm test` and `npm run build`. The generated deployment configuration is `dist/server/wrangler.json`; it points to the Worker and `dist/client` static assets. Build-time D1 and launch configuration is included. The migration path is generated from the source `drizzle/` directory.
+5. On your production D1 database, apply **all** unapplied migrations from `drizzle/`, in order. Through Wrangler: `npx wrangler d1 migrations apply exclusive-apparel --remote --config dist/server/wrangler.json`. The new `0005_launch-waitlist.sql` adds the signup table, unique email index and date index. `0004` retires the five unphotographed demo products while retaining order references. Back up an existing database before migration.
+6. Deploy the build using your Cloudflare account (for example, `npx wrangler deploy --config dist/server/wrangler.json`). Configure a custom domain and HTTPS on that account. Never put credentials in tracked configuration.
+7. Generate a unique management secret, for example `openssl rand -hex 32`. Store it as the **server-only** Worker secret `WAITLIST_ADMIN_SECRET`, using your host dashboard or `npx wrangler secret put WAITLIST_ADMIN_SECRET --config dist/server/wrangler.json`. It must contain at least 32 characters. Do not prefix it with `NEXT_PUBLIC_`, commit it, or share it with visitors. Open `/admin/` over HTTPS and enter this value as the management password. A new sign-in is required after an hour. Rotating the secret invalidates all existing management cookies.
+8. Confirm a signup saves on your actual host, appears once in `/admin/`, and can be exported and removed. Check your custom domain, mobile layout, accessibility and browser console before public launch.
+
+No R2 bucket is required for the bundled photographs or waiting list. If owner media uploads are enabled later, set `R2_BUCKET_NAME` before building and bind it as `BUCKET`. The previous commerce runtime will need additional payment, shipping, business and authentication setup before sales can open.
+
+## Waiting-list behaviour
+
+- `POST /api/waitlist` validates email, optional first name (100 characters), collection interest, optional valid product reference and explicit consent. Payloads are limited to 16 KiB and the request must have the same origin as the website.
+- Emails are trimmed/lowercased. A unique database constraint and `ON CONFLICT DO NOTHING` keep concurrent/repeated signups to one record. Duplicates cannot overwrite someone else’s name, interest or consent. The same generic accepted response is used for new, existing and honeypot submissions.
+- The record stores email, optional name, interest, product reference, consent version and creation date. Names/addresses are never written to application logs. Rate-limit keys use hashed IP/email values and expiry; raw IP addresses are not signup fields. The host may maintain its own operational logs.
+- Signup requests are limited to 10 per IP per ten minutes and 3 per email per hour. Management sign-in allows 5 attempts per IP per fifteen minutes. These limits use the existing `rate_limits` table, not process memory. Cloudflare supplies the client IP; absent that header the limiter intentionally shares an anonymous bucket.
+- Failed/missing database connections produce an error, never a success message. A successful form submission confirms database acceptance, not email delivery. No mail is sent automatically and no orders, stock reservations or accounts are created.
+- `/admin/` is a dedicated waiting-list dashboard. Its API authenticates a signed, expiring HttpOnly/Secure/SameSite=Strict cookie. Forged owner headers and customer cookies do not grant access. The secret stays on the server; the form does not store it in local/session storage. Management requires HTTPS.
+- The dashboard shows total signups, the last seven days, 50 records per page, the latest 100 contact/privacy messages and removal controls. CSV export includes **only the current page**, is private/no-store, quotes every field and neutralizes spreadsheet formulas. Handle exported personal data carefully and remove stale copies.
+- Visitors can request correction/removal using `/contact/`. Review requests, verify through the email used to sign up, and remove the entry through the dashboard. Review the contact inbox regularly. The site does not currently send automated unsubscribe or confirmation emails; any future launch mailing must provide an appropriate removal method.
+- No selling prices, variant stock, buying controls or selling offers appear in the preview API/product presentation. Shipping rates and pricing sorts are hidden. Cart/checkout/account/order pages redirect to `/waitlist/`; their API entry points reject requests even if `STORE_MODE=live` or payment credentials are configured.
+
+## Verification and remaining launch checks
+
+Automated verification covers the stored consent, duplicate/concurrent submissions, invalid inputs and origin, request limits, bots, rate limits, management cookies, forged owner headers, pagination, CSV formula safety, deletion, public price suppression and server checkout guards. Existing commerce/account tests explicitly opt into their store-mode fixtures so they continue to check the retained future store.
+
+TypeScript, the production build and all 43 tests pass. `npm audit --omit=dev` reported no production dependency vulnerabilities on 22 October 2026; its result is recorded in `WAITLIST-PRODUCTION-AUDIT.json`. This is not a penetration test or a guarantee against vulnerabilities.
+
+The managed preview failed its startup health timeout in this environment; no browser/mobile visual approval or Core Web Vitals score is claimed. Verify these on your final host. Configure database backups and log access, confirm the live signup and owner-login flows, and review your business/privacy contact information before advertising the site. A production hostname, database ID, management secret and actual deployment are owner setup steps, not completed external actions.

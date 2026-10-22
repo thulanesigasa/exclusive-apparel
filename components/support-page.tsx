@@ -1,4 +1,6 @@
 'use client';
+import {PRELAUNCH} from '@/lib/launch';
+import {PrelaunchSupport} from './prelaunch-support';
 import Link from 'next/link';
 import {useStore} from './store-provider';
 import {ContactForm} from './contact-form';
@@ -6,6 +8,7 @@ import {SizeTable} from './size-table';
 function PolicyDocument({text}:{text:string}){return <div className="policy-document">{text.split(/\n\n+/).filter(Boolean).map((block,index)=>{const [line,...rest]=block.split('\n');return line.startsWith('## ')?<section key={index}><h2>{line.slice(3)}</h2>{rest.length>0&&<p>{rest.join('\n')}</p>}</section>:<p key={index}>{block}</p>;})}</div>;}
 export function SupportPage({kind}:{kind:'contact'|'returns'|'delivery'|'terms'|'privacy'|'help'|'sizing'}){
  const {settings:s,live,products}=useStore();const titles={contact:'Contact us.',returns:'Returns & exchanges.',delivery:'Delivery & collection.',terms:'Terms of service.',privacy:'Privacy policy.',help:'Help & FAQs.',sizing:'Find your fit.'};
+ if(PRELAUNCH)return <PrelaunchSupport kind={kind}/>;
  const policy=kind==='returns'?s.returns:kind==='delivery'?s.deliveryPolicy:kind==='privacy'?s.privacy:kind==='terms'?s.terms:'';
  return <section className="section prose support-page"><p className="eyebrow">EXCLUSIVE APPAREL / {['terms','privacy','returns'].includes(kind)?'LEGAL':'GOOD TO KNOW'}</p><h1>{titles[kind]}</h1>{!live&&<div className="notice"><strong>Development store · Test orders only</strong><p>Live payment and dispatch are not enabled. Product measurements, business details and voluntary exchange terms that have not been confirmed are marked accordingly.</p></div>}
  {policy&&<PolicyDocument text={policy}/>}

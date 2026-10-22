@@ -1,0 +1,11 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {createElement} from 'react';
+import {renderToStaticMarkup} from 'react-dom/server';
+import {ProductCard} from '../components/product-card';
+import {ProductPreview} from '../components/product-preview';
+import {WaitlistForm} from '../components/waitlist-form';
+import {products} from '../lib/catalog';
+import {previewProduct,PRELAUNCH} from '../lib/launch';
+test('prelaunch product markup never shows a selling price, stock count or add-to-bag control',()=>{assert.equal(PRELAUNCH,true);for(const product of products){const card=renderToStaticMarkup(createElement(ProductCard,{product}));const detail=renderToStaticMarkup(createElement(ProductPreview,{product:previewProduct(product)}));assert.ok(!card.includes('ZAR'));assert.ok(!card.includes(`R${product.price}`));assert.ok(!detail.includes('Add to bag'));assert.ok(!card.includes('Out of stock'));assert.ok(card.replaceAll('/?','?').includes(`/waitlist?product=${product.id}`));assert.ok(detail.includes('No orders, reservations or payments'));}});
+test('waitlist markup requires email and an unchecked consent checkbox, with privacy/removal links',()=>{const html=renderToStaticMarkup(createElement(WaitlistForm,{}));assert.match(html,/type="email"[^>]*required/);assert.match(html,/type="checkbox"[^>]*required/);assert.ok(!html.includes('checked=""'));assert.ok(html.includes('/privacy'));assert.ok(html.includes('/contact'));});

@@ -1,3 +1,5 @@
+> The current pre-launch waiting-list controls and management authentication are documented in [WAITLIST-LAUNCH.md](WAITLIST-LAUNCH.md). Existing customer/Supabase/commerce controls below are retained for the future store; those public entry points are blocked in pre-launch mode.
+
 # Customer accounts and security
 
 Customer accounts are optional. `/account/` supports sign-up, email-code verification, sign-in, password recovery, profile-name changes and sign-out. Guest checkout does not depend on the account provider and remains available when accounts are disabled. The site is still owner-private and live commerce is still disabled.

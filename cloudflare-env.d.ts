@@ -9,6 +9,8 @@ declare namespace Cloudflare {
     ADMIN_EMAILS?: string;
     STORE_SETUP_SECRET?: string;
     STORE_MODE?: string;
+    STOREFRONT_MODE?: string;
+    WAITLIST_ADMIN_SECRET?: string;
     PAYFAST_MERCHANT_ID?: string;
     PAYFAST_MERCHANT_KEY?: string;
     PAYFAST_PASSPHRASE?: string;

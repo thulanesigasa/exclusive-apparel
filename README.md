@@ -1,3 +1,5 @@
+> **Current launch: waiting list only.** The seven photographed products are previews. Prices and purchasing controls are hidden; checkout and customer-account entry points are disabled server-side. `/waitlist/` collects consented launch signups and `/admin/` manages them. No website was published by this update. Start with [Waiting-list deployment](docs/WAITLIST-LAUNCH.md), apply migration `0005_launch-waitlist.sql`, and configure your final domain, D1 database and server-only management secret. The commerce sections below describe retained future functionality, not an open store.
+
 # Exclusive Apparel
 
 ![Next.js](https://img.shields.io/badge/Next.js-16.4-000000?style=for-the-badge&logo=next.js&logoColor=white)
