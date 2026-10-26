@@ -50,6 +50,13 @@
       "when": 1793014295676,
       "tag": "0006_waitlist-emails",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1793016414002,
+      "tag": "0007_waitlist-daily-budget",
+      "breakpoints": true
     }
   ]
 }

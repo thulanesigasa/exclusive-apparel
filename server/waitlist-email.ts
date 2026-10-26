@@ -15,15 +15,31 @@ export function waitingListEmails(person:{name:string;surname:string;phone:strin
 export async function sendWaitlistEmails(env:WaitlistEmailEnv,signupId?:string,send:typeof fetch=fetch){
  if(!env.DB||!env.RESEND_API_KEY)return;
  const db=env.DB,now=Date.now();
+ const control=await db.prepare("SELECT paused_until FROM waitlist_email_control WHERE id='provider'").first<{paused_until:number}>();
+ if(control&&control.paused_until>now)return;
  await db.prepare("UPDATE waitlist_email_jobs SET status='review' WHERE status='pending' AND first_attempt>0 AND first_attempt<?").bind(now-23*3600000).run();
- const jobs=await db.prepare(`SELECT id FROM waitlist_email_jobs WHERE status='pending' AND next_attempt<=? ${signupId?'AND signup_id=?':''} ORDER BY next_attempt LIMIT 10`).bind(...(signupId?[now,signupId]:[now])).all<{id:string}>();
+ // All invocations, including fresh signups, drain oldest eligible entries first.
+ const jobs=await db.prepare("SELECT j.id,j.first_attempt FROM waitlist_email_jobs j JOIN waitlist_signups s ON s.id=j.signup_id WHERE j.status='pending' AND j.next_attempt<=? ORDER BY s.created_at,j.rowid LIMIT 10").bind(now).all<{id:string;first_attempt:number}>();
  for(const job of jobs.results){
-  const claimed=await db.prepare("UPDATE waitlist_email_jobs SET next_attempt=?,first_attempt=CASE WHEN first_attempt=0 THEN ? ELSE first_attempt END,attempts=attempts+1 WHERE id=? AND status='pending' AND next_attempt<=? RETURNING payload").bind(Date.now()+300000,Date.now(),job.id,Date.now()).first<{payload:string}>();
+  let claimed:{payload:string;attempts:number}|null;
+  try{claimed=await db.prepare("UPDATE waitlist_email_jobs SET next_attempt=?,first_attempt=CASE WHEN first_attempt=0 THEN ? ELSE first_attempt END,attempts=attempts+1 WHERE id=? AND status='pending' AND next_attempt<=? RETURNING payload,attempts").bind(Date.now()+300000,Date.now(),job.id,Date.now()).first<{payload:string;attempts:number}>();
+  }catch(error){if(error instanceof Error&&error.message.includes('WAITLIST_DAILY_LIMIT'))return;throw error;}
   if(!claimed)continue;
   try{
    const response=await send('https://api.resend.com/emails/batch',{method:'POST',headers:{Authorization:`Bearer ${env.RESEND_API_KEY}`,'Content-Type':'application/json','Idempotency-Key':`waitlist/${job.id}`},body:claimed.payload,signal:AbortSignal.timeout(10000)});
    if(response.ok){const result=await response.json() as {data?:{id:string}[]};if(!Array.isArray(result.data)||result.data.length!==2||!result.data.every(row=>typeof row.id==='string'))throw new Error('Invalid delivery acknowledgement');await db.prepare("UPDATE waitlist_email_jobs SET status='submitted',last_error='' WHERE id=?").bind(job.id).run();}
-   else {await db.prepare('UPDATE waitlist_email_jobs SET last_error=? WHERE id=?').bind(`Provider HTTP ${response.status}`,job.id).run();}
+   else {
+    let code='';try{const data=await response.json() as {name?:string};code=data.name||'';}catch{}
+    const quota=['daily_quota_exceeded','monthly_quota_exceeded'].includes(code);
+    await db.prepare('UPDATE waitlist_email_jobs SET last_error=? WHERE id=?').bind(quota?code:`Provider HTTP ${response.status}`,job.id).run();
+    if(quota){const nextDay=Date.parse(new Date(Date.now()+86400000).toISOString().slice(0,10)+'T00:00:00Z');
+     await db.prepare("INSERT INTO waitlist_email_control(id,paused_until) VALUES('provider',?) ON CONFLICT(id) DO UPDATE SET paused_until=MAX(paused_until,excluded.paused_until)").bind(nextDay).run();
+     // A first attempt explicitly rejected for quota was not accepted for delivery.
+     if(job.first_attempt===0)await db.prepare('UPDATE waitlist_email_jobs SET first_attempt=0,next_attempt=? WHERE id=?').bind(nextDay,job.id).run();
+     return;
+    }
+    if(response.status===429)return;
+   }
   }catch{await db.prepare("UPDATE waitlist_email_jobs SET last_error='Delivery acknowledgement unavailable' WHERE id=?").bind(job.id).run();}
  }
 }

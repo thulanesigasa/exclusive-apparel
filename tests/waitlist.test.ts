@@ -7,7 +7,7 @@ import {waitlist} from '../server/waitlist';
 import {prelaunchResponse} from '../server/prelaunch';
 import {commerce} from '../server/commerce';
 class Statement{constructor(private database:DatabaseSync,private sql:string,private args:any[]=[]){ }bind(...args:any[]){return new Statement(this.database,this.sql,args);}async all(){return {results:this.database.prepare(this.sql).all(...this.args)};}async first<T>(){return this.database.prepare(this.sql).get(...this.args) as T||null;}run(){const result=this.database.prepare(this.sql).run(...this.args);return {meta:{changes:Number(result.changes)}};}}
-function setup(){const sqlite=new DatabaseSync(':memory:');sqlite.exec('PRAGMA foreign_keys=ON');for(const file of ['0000_windy_blob','0001_inventory-safety','0002_parched_fantastic_four','0003_flawless_kingpin','0004_retire-unphotographed-products','0005_launch-waitlist','0006_waitlist-emails'])sqlite.exec(readFileSync(`drizzle/${file}.sql`,'utf8').replaceAll('--> statement-breakpoint',''));return {sqlite,env:{DB:{batch:async(statements:Statement[])=>{sqlite.exec('BEGIN');try{const results=[];for(const statement of statements)results.push(statement.run());sqlite.exec('COMMIT');return results;}catch(error){sqlite.exec('ROLLBACK');throw error;}},prepare:(sql:string)=>new Statement(sqlite,sql)} as any,WAITLIST_ADMIN_SECRET:'a-secure-owner-secret-that-is-over-32-characters'}};}
+function setup(){const sqlite=new DatabaseSync(':memory:');sqlite.exec('PRAGMA foreign_keys=ON');for(const file of ['0000_windy_blob','0001_inventory-safety','0002_parched_fantastic_four','0003_flawless_kingpin','0004_retire-unphotographed-products','0005_launch-waitlist','0006_waitlist-emails','0007_waitlist-daily-budget'])sqlite.exec(readFileSync(`drizzle/${file}.sql`,'utf8').replaceAll('--> statement-breakpoint',''));return {sqlite,env:{DB:{batch:async(statements:Statement[])=>{sqlite.exec('BEGIN');try{const results=[];for(const statement of statements)results.push(statement.run());sqlite.exec('COMMIT');return results;}catch(error){sqlite.exec('ROLLBACK');throw error;}},prepare:(sql:string)=>new Statement(sqlite,sql)} as any,WAITLIST_ADMIN_SECRET:'a-secure-owner-secret-that-is-over-32-characters'}};}
 const signup=(email='buyer@example.test')=>({email,name:'Buyer',surname:'Example',phone:'+27 82 123 4567',interest:'Women',productId:'boxy-tee',consent:true,website:''});
 async function call(env:any,path='/api/waitlist',method='POST',data:any=signup(),headers:Record<string,string>={}){const request=new Request('https://store.test'+path,{method,headers:{Origin:'https://store.test','Content-Type':'application/json','cf-connecting-ip':'192.0.2.1',...headers},...(method==='GET'?{}:{body:JSON.stringify(data)})});const response=(await waitlist(request,env))!;return {response,data:response.headers.get('Content-Type')?.includes('application/json')?await response.clone().json() as any:await response.clone().text()};}
 async function login(env:any){const result=await call(env,'/api/waitlist/admin/session','POST',{password:env.WAITLIST_ADMIN_SECRET});assert.equal(result.response.status,200);return result.response.headers.get('Set-Cookie')!.split(';')[0];}
@@ -58,4 +58,29 @@ test('signup and queued emails roll back together if queue persistence fails',as
 test('migration retains existing signups without sending retroactive email',async()=>{
  const {env,sqlite}=setup();sqlite.prepare("INSERT INTO waitlist_signups(id,email,name,consent_version,created_at) VALUES(?,?,?,?,?)").run(crypto.randomUUID(),'buyer@example.test','Original','launch-notifications-v1',new Date().toISOString());
  assert.equal((await call(env)).response.status,202);assert.equal(sqlite.prepare('SELECT * FROM waitlist_email_jobs').all().length,0);assert.equal((sqlite.prepare('SELECT name FROM waitlist_signups').get() as any).name,'Original');
+});
+function queued(sqlite:DatabaseSync,index:number){const id=crypto.randomUUID();sqlite.prepare('INSERT INTO waitlist_signups(id,email,name,consent_version,created_at) VALUES(?,?,?,?,?)').run(id,`queue${index}@example.test`,'Queue','launch-notifications-v2',new Date(1700000000000+index*1000).toISOString());sqlite.prepare('INSERT INTO waitlist_email_jobs(id,signup_id,payload) VALUES(?,?,?)').run(id,id,JSON.stringify(waitingListEmails({name:'Queue',surname:String(index),phone:'+27821234567',email:`queue${index}@example.test`,interest:'Everyone',productId:''})));return id;}
+test('concurrent senders cap reservations at 100 emails and carry untouched entries to the next UTC day',async()=>{
+ const {env,sqlite}=setup();for(let i=0;i<55;i++)queued(sqlite,i);let sent=0;
+ const send=(async()=>{sent++;return Response.json({data:[{id:'owner'},{id:'customer'}]});}) as typeof fetch;
+ const mailEnv={...env,RESEND_API_KEY:'test-key'};
+ await Promise.all(Array.from({length:8},()=>sendWaitlistEmails(mailEnv,undefined,send)));
+ // Workers may observe the same candidate window; drain remaining windows.
+ for(let i=0;i<6;i++)await sendWaitlistEmails(mailEnv,undefined,send);
+ assert.equal(sent,50);assert.equal((sqlite.prepare('SELECT reserved FROM waitlist_email_budget').get() as any).reserved,100);
+ const waiting=sqlite.prepare("SELECT first_attempt,attempts FROM waitlist_email_jobs WHERE status='pending'").all();assert.equal(waiting.length,5);assert.ok(waiting.every((r:any)=>r.first_attempt===0&&r.attempts===0));
+ sqlite.exec("UPDATE waitlist_email_budget SET day='2000-01-01'");await sendWaitlistEmails(mailEnv,undefined,send);assert.equal(sent,55);assert.equal((sqlite.prepare("SELECT reserved FROM waitlist_email_budget WHERE day=strftime('%Y-%m-%d','now')").get() as any).reserved,10);
+});
+test('new signup cannot bypass older queued signups and deletion cannot replenish the daily allowance',async()=>{
+ const {env,sqlite}=setup();const first=queued(sqlite,0),last=queued(sqlite,1);const subjects:string[]=[];
+ sqlite.prepare("INSERT INTO waitlist_email_budget(day,reserved) VALUES(strftime('%Y-%m-%d','now'),98)").run();
+ await sendWaitlistEmails({...env,RESEND_API_KEY:'test-key'},last,(async(_url:any,init:RequestInit)=>{subjects.push(JSON.parse(init.body as string)[0].subject);return Response.json({data:[{id:'a'},{id:'b'}]});}) as typeof fetch);
+ assert.deepEqual(subjects,['Join Waiting List - Queue 0']);sqlite.prepare('DELETE FROM waitlist_signups WHERE id=?').run(first);assert.equal((sqlite.prepare('SELECT reserved FROM waitlist_email_budget').get() as any).reserved,100);
+});
+test('provider quota exhaustion pauses all sending without losing a rejected first attempt',async()=>{
+ const {env,sqlite}=setup();queued(sqlite,0);queued(sqlite,1);let calls=0;const mailEnv={...env,RESEND_API_KEY:'test-key'};
+ const send=(async()=>{calls++;return Response.json({name:'daily_quota_exceeded',message:'private provider data'},{status:429});}) as typeof fetch;
+ await sendWaitlistEmails(mailEnv,undefined,send);await sendWaitlistEmails(mailEnv,undefined,send);assert.equal(calls,1);
+ assert.equal((sqlite.prepare("SELECT COUNT(*) n FROM waitlist_email_jobs WHERE status='pending' AND first_attempt=0").get() as any).n,2);
+ assert.ok((sqlite.prepare('SELECT paused_until FROM waitlist_email_control').get() as any).paused_until>Date.now());
 });
