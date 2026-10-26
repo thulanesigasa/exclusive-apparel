@@ -38,3 +38,14 @@ Catalogue integration tests cover each group, gallery persistence and owner repl
 At the owner's request, the five unphotographed entries were removed: Junior Beanie, Junior Joggers, Heavyweight Tee, Wide Leg Sweats, and Sport Cap. The seven remaining starter products have supplied primary photos and galleries directly in `lib/products.json`. Obsolete media for those five withdrawn entries was removed from the repository. Server catalogue and checkout guards also block old database records for these IDs. Migration `0004_retire-unphotographed-products.sql` marks existing rows inactive while preserving historical order/variant references; apply it on the owner's final database deployment.
 
 This final change is GitHub-only. No new website publication was requested. The previously published private Sites preview still requires manual removal because the available Sites connector has no unpublish/delete operation. No custom domains were attached. The Supabase project and database data have not been deleted.
+
+## Additional cap lifestyle photographs — 26 October 2026
+
+Five supplied JPEGs are included as responsive 768px and 384px WebP images under `public/photos/lifestyle/`, with descriptive alt text and dimensions recorded in `lib/lifestyle-photo-assets.json`. Originals remain unchanged.
+
+- `1128061.jpg`: Men’s category cover and homepage hero (`men-street`).
+- `1128060.jpg`: Women’s category cover (`women-bench`).
+- `1128058.jpg`, `1128055.jpg`, `1128054.jpg`: Men’s styling gallery (close-up, monochrome and overhead).
+- All five also appear in the existing unisex Everyday Cap gallery, with zoom. Kids retains its existing supplied photos.
+
+These are cap styling photographs, not new listings for the jackets, jeans or footwear shown. No prices, purchase controls or stock claims have been introduced. Existing database records using bundled media receive the expanded gallery; owner-uploaded replacement cover images are preserved.

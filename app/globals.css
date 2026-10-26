@@ -60,3 +60,5 @@ html{scroll-behavior:smooth;scroll-padding-top:110px}.header-waitlist{white-spac
 @media(max-width:900px){.waitlist-home,.waitlist-page{grid-template-columns:1fr;gap:32px}.waitlist-panel{max-width:650px;width:100%}.header-waitlist{font-size:12px}.waitlist-page h1{font-size:clamp(42px,10vw,70px)}}
 @media(max-width:520px){.waitlist-fields{grid-template-columns:1fr}.waitlist-panel{box-shadow:4px 4px 0 #d3d9c6;padding:22px}.waitlist-home h2{font-size:44px}.header-actions{gap:14px}.header-waitlist svg{display:none}.waitlist-form{gap:18px}.waitlist-admin-actions{width:100%}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+
+.collection-lifestyle-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:0 0 32px}.collection-lifestyle-grid a{display:block;background:var(--paper)}.collection-lifestyle-grid img{width:100%;height:auto;aspect-ratio:3/4;object-fit:contain}@media(max-width:760px){.collection-lifestyle-grid{grid-template-columns:1fr;gap:20px}.collection-lifestyle-grid img{max-height:520px}}

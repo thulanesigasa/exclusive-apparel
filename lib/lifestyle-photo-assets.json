@@ -1,0 +1,52 @@
+[
+  {
+    "file": "men-street.webp",
+    "audience": "Men",
+    "alt": "Black Exclusive Apparel cap styled with a two-tone jacket and denim shorts",
+    "width": 768,
+    "height": 1024,
+    "sourceBytes": 472285,
+    "fullBytes": 121178,
+    "smallBytes": 33064
+  },
+  {
+    "file": "women-bench.webp",
+    "audience": "Women",
+    "alt": "Black Exclusive Apparel cap styled with a black shirt and light denim beside a brick wall",
+    "width": 768,
+    "height": 1024,
+    "sourceBytes": 468950,
+    "fullBytes": 125684,
+    "smallBytes": 33198
+  },
+  {
+    "file": "men-closeup.webp",
+    "audience": "Men",
+    "alt": "Close-up of the Exclusive Apparel crown logo on a black cap worn with a black T-shirt",
+    "width": 768,
+    "height": 1024,
+    "sourceBytes": 437264,
+    "fullBytes": 116366,
+    "smallBytes": 32194
+  },
+  {
+    "file": "men-monochrome.webp",
+    "audience": "Men",
+    "alt": "Black-and-white lifestyle photograph of an Exclusive Apparel cap styled with a blazer",
+    "width": 768,
+    "height": 1024,
+    "sourceBytes": 436601,
+    "fullBytes": 121240,
+    "smallBytes": 30532
+  },
+  {
+    "file": "men-overhead.webp",
+    "audience": "Men",
+    "alt": "Overhead lifestyle photograph showing the Exclusive Apparel logo on a black cap",
+    "width": 768,
+    "height": 576,
+    "sourceBytes": 534469,
+    "fullBytes": 100226,
+    "smallBytes": 23082
+  }
+]
