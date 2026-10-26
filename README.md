@@ -1,4 +1,4 @@
-> **Current launch: waiting list only.** The seven photographed products are previews. Prices and purchasing controls are hidden; checkout and customer-account entry points are disabled server-side. `/waitlist/` collects consented launch signups and `/admin/` manages them. No website was published by this update. Start with [Waiting-list deployment](docs/WAITLIST-LAUNCH.md), apply migration `0005_launch-waitlist.sql`, and configure your final domain, D1 database and server-only management secret. The commerce sections below describe retained future functionality, not an open store.
+> **Current launch: waiting list only.** Collection previews have no prices or checkout. New waiting-list records, delivery queues, rate limits and demographic statistics use **Supabase**; the Worker keeps the service key private. **FormSubmit** sends the owner notification and **Resend** sends one customer confirmation, capped at 100 recipient attempts per UTC day. `/admin/` provides a numbered table, filters and summaries. See [Waiting-list deployment](docs/WAITLIST-LAUNCH.md) for the Supabase migration and host configuration. The remote project is currently paused and the new migration has not been applied remotely. D1 remains in use for the existing catalogue and contact messages. Commerce sections below describe future functionality.
 
 # Exclusive Apparel
 
@@ -12,7 +12,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-%3E=22.13-339933?style=for-the-badge&logo=node.js&logoColor=white)
 ![Design System](https://img.shields.io/badge/Design_System-60--30--10_Rule-466144?style=for-the-badge)
-![Tests](https://img.shields.io/badge/Tests-35_Passing-brightgreen?style=for-the-badge)
+![Tests](https://img.shields.io/badge/Tests-54_Passing-brightgreen?style=for-the-badge)
 
 Exclusive Apparel is an edge-native, full-stack apparel commerce platform catering to men, women, and kids. Architected for speed, data integrity, and high-conversion UX, the storefront pairs Next.js React Server Components with Cloudflare Workers, Cloudflare D1 serverless relational storage, Cloudflare R2 photo storage, Supabase authentication with Row-Level Security (RLS), and a resilient guest-first commerce engine.
 

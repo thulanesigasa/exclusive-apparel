@@ -1,86 +1,129 @@
-import {waitingListEmails,sendWaitlistEmails} from '../server/waitlist-email';
-import {test} from 'node:test';
+import {test,before,after,beforeEach} from 'node:test';
 import assert from 'node:assert/strict';
-import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
+import {PGlite} from '@electric-sql/pglite';
 import {waitlist} from '../server/waitlist';
+import {waitingListConfirmation,sendWaitlistEmails,formsubmitNotification} from '../server/waitlist-email';
+import {normalizePhone,demographicFields} from '../lib/waitlist-demographics';
 import {prelaunchResponse} from '../server/prelaunch';
-import {commerce} from '../server/commerce';
-class Statement{constructor(private database:DatabaseSync,private sql:string,private args:any[]=[]){ }bind(...args:any[]){return new Statement(this.database,this.sql,args);}async all(){return {results:this.database.prepare(this.sql).all(...this.args)};}async first<T>(){return this.database.prepare(this.sql).get(...this.args) as T||null;}run(){const result=this.database.prepare(this.sql).run(...this.args);return {meta:{changes:Number(result.changes)}};}}
-function setup(){const sqlite=new DatabaseSync(':memory:');sqlite.exec('PRAGMA foreign_keys=ON');for(const file of ['0000_windy_blob','0001_inventory-safety','0002_parched_fantastic_four','0003_flawless_kingpin','0004_retire-unphotographed-products','0005_launch-waitlist','0006_waitlist-emails','0007_waitlist-daily-budget'])sqlite.exec(readFileSync(`drizzle/${file}.sql`,'utf8').replaceAll('--> statement-breakpoint',''));return {sqlite,env:{DB:{batch:async(statements:Statement[])=>{sqlite.exec('BEGIN');try{const results=[];for(const statement of statements)results.push(statement.run());sqlite.exec('COMMIT');return results;}catch(error){sqlite.exec('ROLLBACK');throw error;}},prepare:(sql:string)=>new Statement(sqlite,sql)} as any,WAITLIST_ADMIN_SECRET:'a-secure-owner-secret-that-is-over-32-characters'}};}
-const signup=(email='buyer@example.test')=>({email,name:'Buyer',surname:'Example',phone:'+27 82 123 4567',interest:'Women',productId:'boxy-tee',consent:true,website:''});
-async function call(env:any,path='/api/waitlist',method='POST',data:any=signup(),headers:Record<string,string>={}){const request=new Request('https://store.test'+path,{method,headers:{Origin:'https://store.test','Content-Type':'application/json','cf-connecting-ip':'192.0.2.1',...headers},...(method==='GET'?{}:{body:JSON.stringify(data)})});const response=(await waitlist(request,env))!;return {response,data:response.headers.get('Content-Type')?.includes('application/json')?await response.clone().json() as any:await response.clone().text()};}
-async function login(env:any){const result=await call(env,'/api/waitlist/admin/session','POST',{password:env.WAITLIST_ADMIN_SECRET});assert.equal(result.response.status,200);return result.response.headers.get('Set-Cookie')!.split(';')[0];}
-test('waitlist persists explicit consent and normalizes duplicates without exposing membership',async()=>{const {env,sqlite}=setup();const one=await call(env,undefined,undefined,signup('Buyer@Example.Test'));const two=await call(env,undefined,undefined,{...signup('buyer@example.test'),name:'Replacement'});assert.equal(one.response.status,202);assert.deepEqual(two.data,one.data);const row=sqlite.prepare('SELECT * FROM waitlist_signups').get() as any;assert.equal(row.email,'buyer@example.test');assert.equal(row.name,'Buyer');assert.equal(row.interest,'Women');assert.equal(row.product_id,'boxy-tee');assert.equal(row.consent_version,'launch-notifications-v2');assert.ok(row.created_at);assert.equal((sqlite.prepare('SELECT COUNT(*) n FROM waitlist_signups').get() as any).n,1);assert.ok(!JSON.stringify(one.data).includes(row.email));assert.equal(one.response.headers.get('Cache-Control'),'private, no-store');});
-test('waitlist validates consent, source, JSON bounds and origin and traps bots',async()=>{const {env,sqlite}=setup();assert.equal((await call(env,undefined,undefined,{...signup(),consent:false})).response.status,400);assert.equal((await call(env,undefined,undefined,signup('x@@example.test'))).response.status,400);assert.equal((await call(env,undefined,undefined,{...signup(),productId:'heavyweight-tee'})).response.status,400);assert.equal((await call(env,undefined,undefined,signup(),{Origin:'https://attacker.test'})).response.status,403);assert.equal((await call(env,undefined,undefined,signup(),{'Content-Type':'text/plain'})).response.status,415);assert.equal((await call(env,undefined,undefined,{...signup(),name:'x'.repeat(17000)})).response.status,413);assert.equal((await call(env,undefined,undefined,{...signup(),website:'spam.example'})).response.status,202);assert.equal((sqlite.prepare('SELECT COUNT(*) n FROM waitlist_signups').get() as any).n,0);assert.equal((await call({},undefined)).response.status,503);});
-test('atomic uniqueness and rate limits protect public submissions without storing raw IP or email in rate keys',async()=>{const {env,sqlite}=setup();await Promise.all([call(env),call(env)]);assert.equal((sqlite.prepare('SELECT COUNT(*) n FROM waitlist_signups').get() as any).n,1);for(let i=0;i<8;i++)assert.equal((await call(env,undefined,undefined,signup(`different${i}@example.test`))).response.status,202);const blocked=await call(env,undefined,undefined,signup('extra@example.test'));assert.equal(blocked.response.status,429);assert.ok(blocked.response.headers.has('Retry-After'));const keys=JSON.stringify(sqlite.prepare('SELECT key FROM rate_limits').all());assert.ok(!keys.includes('192.0.2.1'));assert.ok(!keys.includes('@'));});
-test('management uses signed HttpOnly sessions and ignores forged owner headers',async()=>{const {env}=setup();const forged={'oai-authenticated-user-id':'owner','oai-authenticated-user-email':'owner@example.test'};assert.equal((await call(env,'/api/waitlist/admin','GET',undefined,forged)).response.status,401);assert.equal((await call(env,'/api/waitlist/admin/session','POST',{password:'wrong'})).response.status,401);const result=await call(env,'/api/waitlist/admin/session','POST',{password:env.WAITLIST_ADMIN_SECRET});const cookie=result.response.headers.get('Set-Cookie')!;assert.match(cookie,/HttpOnly; Secure; SameSite=Strict; Max-Age=3600/);assert.ok(!cookie.includes(env.WAITLIST_ADMIN_SECRET));assert.equal((await call(env,'/api/waitlist/admin','GET',undefined,{Cookie:cookie.split(';')[0]})).response.status,200);assert.equal((await call(env,'/api/waitlist/admin','GET',undefined,{Cookie:cookie.split(';')[0]+'tampered'})).response.status,401);assert.equal((await call({...env,WAITLIST_ADMIN_SECRET:'rotated-secret-that-is-longer-than-thirty-two'},'/api/waitlist/admin','GET',undefined,{Cookie:cookie.split(';')[0]})).response.status,401);const logout=await call(env,'/api/waitlist/admin/session','DELETE',{});assert.match(logout.response.headers.get('Set-Cookie')!,/Max-Age=0/);assert.equal((await call({...env,WAITLIST_ADMIN_SECRET:''},'/api/waitlist/admin','GET')).response.status,503);});
-test('management is paginated, export neutralizes formulas, and verified removal deletes the record',async()=>{const {env,sqlite}=setup();await call(env,undefined,undefined,{...signup(),name:'=SUM(1,1)'});await call(env,undefined,undefined,signup('second@example.test'));const Cookie=await login(env);const page=await call(env,'/api/waitlist/admin?limit=1&offset=0','GET',undefined,{Cookie});assert.equal(page.data.total,2);assert.equal(page.data.recent,2);assert.equal(page.data.signups.length,1);assert.equal((await call(env,'/api/waitlist/admin?limit=NaN','GET',undefined,{Cookie})).response.status,400);const csv=await call(env,'/api/waitlist/admin/export','GET',undefined,{Cookie});assert.equal(csv.response.headers.get('Cache-Control'),'private, no-store');assert.ok(csv.data.includes('"\'=SUM(1,1)"'));const id=(sqlite.prepare("SELECT id FROM waitlist_signups WHERE email='buyer@example.test'").get() as any).id;assert.equal((await call(env,`/api/waitlist/admin/${id}`,'DELETE',{}, {Cookie})).response.status,200);assert.equal((sqlite.prepare('SELECT COUNT(*) n FROM waitlist_signups').get() as any).n,1);});
-test('prelaunch defaults block orders and hide selling prices even when payment flags are live',async()=>{const {env}=setup();for(const path of ['/api/checkout','/api/orders/example/payment','/api/account/sign-up','/api/admin/products']){const response=prelaunchResponse(new Request('https://store.test'+path),{STORE_MODE:'live'} as any)!;assert.equal(response.status,409);}for(const path of ['/cart/','/checkout/','/orders/','/account/'])assert.equal(prelaunchResponse(new Request('https://store.test'+path),{})!.headers.get('Location'),'https://store.test/waitlist/');const response=await commerce(new Request('https://store.test/api/checkout',{method:'POST',headers:{Origin:'https://store.test'}}),{...env,STORE_MODE:'live'});assert.equal(response!.status,409);const catalogue=await commerce(new Request('https://store.test/api/catalogue'),env);const data=await catalogue!.json() as any;assert.equal(data.products.length,7);for(const product of data.products){assert.ok(!('price' in product));assert.ok(!('variants' in product));assert.ok(!('sizes' in product));}assert.equal(prelaunchResponse(new Request('https://store.test/checkout/'),{STOREFRONT_MODE:'store'}),null);});
+const db=new PGlite();const originalFetch=globalThis.fetch;
+const env={SUPABASE_URL:'https://database.example.test',SUPABASE_SERVICE_ROLE_KEY:'sb_secret_test',WAITLIST_ADMIN_SECRET:'private-management-secret-over-thirty-two-characters',WAITLIST_SITE_URL:'https://exclusive-apparel.co.za'};
+const signup=(email='buyer@example.test')=>({email,name:'Buyer',surname:'Example',phone:'082 123 4567',country:'ZA',gender:'Female',ageBand:'20-23',adultContact:true,guardian:false,interest:'Women',productId:'boxy-tee',consent:true,website:''});
+async function rpc(action:string,data:Record<string,unknown>={}){return (await db.query<{result:any}>('select public.ea_waitlist_service($1,$2::jsonb) result',[action,JSON.stringify(data)])).rows[0].result;}
+async function sql(query:string,args:any[]=[]){return (await db.query<any>(query,args)).rows;}
+before(async()=>{
+ await db.exec('create role anon; create role authenticated; create role service_role bypassrls;');
+ await db.exec(readFileSync('supabase/migrations/20261026162545_waitlist_demographics_and_delivery.sql','utf8'));
+ globalThis.fetch=(async(input:RequestInfo|URL,init?:RequestInit)=>{
+  const url=String(input);assert.equal(url,'https://database.example.test/rest/v1/rpc/ea_waitlist_service');assert.equal(new Headers(init?.headers).get('apikey'),env.SUPABASE_SERVICE_ROLE_KEY);
+  const {action,data}=JSON.parse(init!.body as string);try{return Response.json(await rpc(action,data));}catch{return Response.json({error:'database failure'},{status:500});}
+ }) as typeof fetch;
+});
+after(async()=>{globalThis.fetch=originalFetch;await db.close();});
+beforeEach(async()=>{await db.exec("reset role;truncate public.ea_waitlist_signups,public.ea_waitlist_jobs,public.ea_waitlist_budget,public.ea_waitlist_limits restart identity cascade;update public.ea_waitlist_control set paused_until='-infinity',next_request_at='-infinity';set role service_role;");});
+async function call(path='/api/waitlist',method='POST',data:any=signup(),headers:Record<string,string>={},config=env){const response=(await waitlist(new Request('https://store.test'+path,{method,headers:{Origin:'https://store.test','Content-Type':'application/json','cf-connecting-ip':'192.0.2.1',...headers},...(method==='GET'?{}:{body:JSON.stringify(data)})}),config))!;return {response,data:response.headers.get('Content-Type')?.includes('application/json')?await response.clone().json() as any:await response.clone().text()};}
+async function login(){const result=await call('/api/waitlist/admin/session','POST',{password:env.WAITLIST_ADMIN_SECRET});assert.equal(result.response.status,200);return result.response.headers.get('Set-Cookie')!.split(';')[0];}
+async function enqueue(index:number,changes:Record<string,unknown>={}){const person={name:'Buyer',surname:`Person ${index}`,email:`person${index}@example.test`,phone:'+27821234567',interest:'Everyone',productId:''};await rpc('signup',{...person,...normalizePhone(person.phone,'ZA'),gender:'Female',age_band:'24+',adult_contact:true,guardian:false,product_id:'',consent_version:'launch-notifications-v3',confirmation:waitingListConfirmation(person),notification:formsubmitNotification(person),...changes});}
+async function unlock(){await db.exec("update public.ea_waitlist_control set next_request_at='-infinity'");}
 
-test('signup saves names, phone and one durable email batch, without leaking the payload to admin lists',async()=>{
- const {env,sqlite}=setup();await call(env);await call(env);
- const row=sqlite.prepare('SELECT * FROM waitlist_signups').get() as any;
- assert.equal(row.surname,'Example');assert.equal(row.phone,'+27 82 123 4567');
- const jobs=sqlite.prepare('SELECT * FROM waitlist_email_jobs').all() as any[];assert.equal(jobs.length,1);
- const payload=JSON.parse(jobs[0].payload);assert.equal(payload[0].subject,'Join Waiting List - Buyer Example');assert.deepEqual(payload[0].to,['1exclusiveapparel@gmail.com']);assert.deepEqual(payload[1].to,['buyer@example.test']);assert.equal(payload[1].from,'Exclusive Apparel <noreply@exclusive-apparel.co.za>');assert.equal(payload[1].reply_to,'1exclusiveapparel@gmail.com');
- const Cookie=await login(env);const admin=await call(env,'/api/waitlist/admin','GET',undefined,{Cookie});assert.equal(admin.data.signups[0].email_status,'pending');assert.equal(admin.data.emailConfigured,false);assert.equal(admin.data.signups[0].payload,undefined);
- await call(env,`/api/waitlist/admin/${row.id}`,'DELETE',{}, {Cookie});assert.equal(sqlite.prepare('SELECT * FROM waitlist_email_jobs').all().length,0);
+test('normalizes domestic/international phones and rejects mismatched country and invalid input',()=>{
+ for(const phone of ['0821234567','+27 82 123 4567','0027821234567'])assert.equal(normalizePhone(phone,'ZA').phone,'+27821234567');
+ assert.equal(normalizePhone('0772123456','ZW').phone,'+263772123456');assert.equal(normalizePhone('020 7946 0018','GB').phone,'+442079460018');
+ assert.throws(()=>normalizePhone('+263772123456','ZA'));assert.throws(()=>normalizePhone('123','ZA'));assert.throws(()=>normalizePhone('<script>','ZA'));assert.throws(()=>normalizePhone('0821234567','XX'));
 });
-test('names and cellphone are required and header-control characters are rejected',async()=>{
- const {env}=setup();for(const change of [{name:''},{surname:''},{phone:''},{phone:'abc1234567'},{phone:'123'},{surname:'Name\r\nBcc:other@example.test'}])assert.equal((await call(env,undefined,undefined,{...signup(),...change})).response.status,400);
+test('age groups do not overlap; optional demographics and guardian confirmations are validated',()=>{
+ assert.deepEqual(demographicFields({adultContact:true}),{gender:'',age_band:'',adult_contact:true,guardian:false});
+ assert.throws(()=>demographicFields({adultContact:true,ageBand:'13-17'}));assert.throws(()=>demographicFields({adultContact:false}));assert.throws(()=>demographicFields({adultContact:true,ageBand:'18-20'}));assert.throws(()=>demographicFields({adultContact:true,gender:'injected'}));
+ assert.equal(demographicFields({adultContact:true,ageBand:'0-12',guardian:true}).guardian,true);
 });
-test('confirmation template escapes personal data and has branded logo, signature and removal links',()=>{
- const emails=waitingListEmails({...signup(),name:'<img src=x>',surname:'Example',phone:'+27821234567'},'https://exclusive-apparel.co.za');
- assert.ok(emails[1].html!.includes('&lt;img src=x&gt;'));assert.ok(!emails[1].html!.includes('<img src=x>'));assert.ok(emails[1].html!.includes('/email-logo.png'));assert.ok(emails[1].html!.includes('Exclusive Apparel × T.s Industries'));assert.ok(emails[1].html!.includes('/contact/'));assert.ok(emails[1].text.includes('nothing to pay'));assert.throws(()=>waitingListEmails({...signup(),surname:'Example',phone:'+27821234567'},'http://insecure.test'));
+test('signup atomically saves normalized data and two distinct providers without revealing duplicates',async()=>{
+ const first=await call(undefined,undefined,signup('Buyer@Example.Test'));const duplicate=await call(undefined,undefined,{...signup(),name:'Overwrite'});assert.equal(first.response.status,202);assert.deepEqual(first.data,duplicate.data);
+ const [row]=await sql('select * from public.ea_waitlist_signups');assert.equal(row.email,'buyer@example.test');assert.equal(row.name,'Buyer');assert.equal(row.phone,'+27821234567');assert.equal(row.country_iso,'ZA');assert.equal(row.gender,'Female');assert.equal(row.age_band,'20-23');assert.equal(row.consent_version,'launch-notifications-v3');
+ const jobs=await sql('select provider,payload from public.ea_waitlist_jobs order by provider');assert.equal(jobs.length,2);assert.equal(jobs[0].payload._subject,'Join Waiting List - Buyer Example');assert.deepEqual(jobs[1].payload.to,['buyer@example.test']);assert.ok(!('gender' in jobs[0].payload));assert.ok(!JSON.stringify(first.data).includes(row.email));
 });
-test('email queue retries with identical payload and idempotency key, then stops after acknowledgement',async()=>{
- const {env,sqlite}=setup();await call(env);const mailEnv={...env,RESEND_API_KEY:'test-key'};const requests:RequestInit[]=[];
- const send=(async(_url:any,init:RequestInit)=>{requests.push(init);return requests.length===1?new Response('{}',{status:503}):Response.json({data:[{id:'owner'},{id:'customer'}]});}) as typeof fetch;
- await sendWaitlistEmails(env,undefined,send);assert.equal(requests.length,0);
- await sendWaitlistEmails(mailEnv,undefined,send);assert.equal((sqlite.prepare('SELECT status FROM waitlist_email_jobs').get() as any).status,'pending');
- await sendWaitlistEmails(mailEnv,undefined,send);assert.equal(requests.length,1);
- sqlite.exec('UPDATE waitlist_email_jobs SET next_attempt=0');await Promise.all([sendWaitlistEmails(mailEnv,undefined,send),sendWaitlistEmails(mailEnv,undefined,send)]);
- assert.equal(requests.length,2);assert.equal(requests[0].body,requests[1].body);assert.equal((requests[0].headers as any)['Idempotency-Key'],(requests[1].headers as any)['Idempotency-Key']);assert.equal((sqlite.prepare('SELECT status FROM waitlist_email_jobs').get() as any).status,'submitted');await sendWaitlistEmails(mailEnv,undefined,send);assert.equal(requests.length,2);
+test('public form validates consent, guardian, email, body size, country, product, content type and origin',async()=>{
+ for(const change of [{consent:false},{adultContact:false},{ageBand:'0-12'},{email:'x@@a.test'},{country:'XX'},{productId:'heavyweight-tee'},{surname:'x\r\nBcc:attack'},{phone:'abc'}])assert.equal((await call(undefined,undefined,{...signup(),...change})).response.status,400);
+ assert.equal((await call(undefined,undefined,signup(),{Origin:'https://attacker.test'})).response.status,403);
+ assert.equal((await call(undefined,undefined,signup(),{'Content-Type':'text/plain'})).response.status,415);
+ assert.equal((await call(undefined,undefined,{...signup(),name:'x'.repeat(17000)},{'cf-connecting-ip':'192.0.2.2'})).response.status,413);
+ assert.equal((await call(undefined,undefined,{...signup(),website:'spam.test'},{'cf-connecting-ip':'192.0.2.3'})).response.status,202);
+ assert.equal((await sql('select count(*) n from public.ea_waitlist_signups'))[0].n,0);
+ assert.equal((await call(undefined,undefined,signup(),{}, {...env,SUPABASE_SERVICE_ROLE_KEY:''})).response.status,503);
 });
-test('ambiguous sends preserve signups and require review outside the provider deduplication window',async()=>{
- const {env,sqlite}=setup();await call(env);let calls=0;const mailEnv={...env,RESEND_API_KEY:'test-key'};
- const send=(async()=>{calls++;throw new Error('network timeout containing private provider data');}) as typeof fetch;
- await sendWaitlistEmails(mailEnv,undefined,send);assert.equal(calls,1);assert.equal((sqlite.prepare('SELECT last_error FROM waitlist_email_jobs').get() as any).last_error,'Delivery acknowledgement unavailable');
- sqlite.prepare('UPDATE waitlist_email_jobs SET next_attempt=0,first_attempt=?').run(Date.now()-24*3600000);
- await sendWaitlistEmails(mailEnv,undefined,send);assert.equal(calls,1);assert.equal((sqlite.prepare('SELECT status FROM waitlist_email_jobs').get() as any).status,'review');assert.equal(sqlite.prepare('SELECT * FROM waitlist_signups').all().length,1);
- assert.equal((await call(env,'/api/waitlist/admin/emails/retry','POST',{})).response.status,401);
+test('persistent rate limits use hashed identifiers and duplicate submissions cannot overwrite data',async()=>{
+ await Promise.all([call(),call()]);assert.equal((await sql('select count(*) n from public.ea_waitlist_signups'))[0].n,1);
+ await call();assert.equal((await call()).response.status,429);
+ for(let i=0;i<6;i++)await call(undefined,undefined,signup(`other${i}@example.test`));assert.equal((await call(undefined,undefined,signup('extra@example.test'))).response.status,429);
+ const keys=JSON.stringify(await sql('select key from public.ea_waitlist_limits'));assert.ok(!keys.includes('@'));assert.ok(!keys.includes('192.0.2.1'));
 });
-test('signup and queued emails roll back together if queue persistence fails',async()=>{
- const {env,sqlite}=setup();sqlite.exec("CREATE TRIGGER reject_queue BEFORE INSERT ON waitlist_email_jobs BEGIN SELECT RAISE(ABORT,'queue unavailable'); END");
- const result=await call(env);assert.equal(result.response.status,503);assert.equal(sqlite.prepare('SELECT * FROM waitlist_signups').all().length,0);assert.equal(sqlite.prepare('SELECT * FROM waitlist_email_jobs').all().length,0);
+test('management rejects forged headers, wrong passwords, tampered sessions and rotated secrets',async()=>{
+ assert.equal((await call('/api/waitlist/admin','GET',undefined,{'oai-authenticated-user-email':'owner@test'})).response.status,401);
+ assert.equal((await call('/api/waitlist/admin/session','POST',{password:'wrong'})).response.status,401);
+ const response=await call('/api/waitlist/admin/session','POST',{password:env.WAITLIST_ADMIN_SECRET});const full=response.response.headers.get('Set-Cookie')!;assert.match(full,/HttpOnly; Secure; SameSite=Strict/);const Cookie=full.split(';')[0];
+ assert.equal((await call('/api/waitlist/admin','GET',undefined,{Cookie})).response.status,200);assert.equal((await call('/api/waitlist/admin','GET',undefined,{Cookie:Cookie+'x'})).response.status,401);
+ assert.equal((await call('/api/waitlist/admin','GET',undefined,{Cookie},{...env,WAITLIST_ADMIN_SECRET:'other-secret-over-thirty-two-characters'})).response.status,401);
+ assert.match((await call('/api/waitlist/admin/session','DELETE',{})).response.headers.get('Set-Cookie')!,/Max-Age=0/);
 });
-test('migration retains existing signups without sending retroactive email',async()=>{
- const {env,sqlite}=setup();sqlite.prepare("INSERT INTO waitlist_signups(id,email,name,consent_version,created_at) VALUES(?,?,?,?,?)").run(crypto.randomUUID(),'buyer@example.test','Original','launch-notifications-v1',new Date().toISOString());
- assert.equal((await call(env)).response.status,202);assert.equal(sqlite.prepare('SELECT * FROM waitlist_email_jobs').all().length,0);assert.equal((sqlite.prepare('SELECT name FROM waitlist_signups').get() as any).name,'Original');
+test('filtered statistics span all pages and CSV includes demographics without exposing job payloads',async()=>{
+ await enqueue(1);await enqueue(2,{country_iso:'ZW',calling_code:'263',phone:'+263772123456',gender:'Male',age_band:'18-19'});await enqueue(3,{name:'=SUM(1,1)'});
+ const Cookie=await login();const result=await call('/api/waitlist/admin?country=ZA&limit=1','GET',undefined,{Cookie});assert.equal(result.data.total,2);assert.equal(result.data.allTotal,3);assert.equal(result.data.signups.length,1);assert.equal(result.data.genders[0].count,2);assert.equal(result.data.signups[0].payload,undefined);assert.equal(result.data.signups[0].number,3);
+ const filtered=await call('/api/waitlist/admin?country=ZW&gender=Male&age=18-19','GET',undefined,{Cookie});assert.equal(filtered.data.total,1);assert.equal(filtered.data.countries[0].label,'ZW');
+ const csv=await call('/api/waitlist/admin/export?country=ZA','GET',undefined,{Cookie});assert.ok(csv.data.includes('"country_iso"'));assert.ok(csv.data.includes('"\'=SUM(1,1)"'));assert.ok(!csv.data.includes('person2@example.test'));assert.equal(csv.response.headers.get('Cache-Control'),'private, no-store');
+ assert.equal((await call('/api/waitlist/admin?country=INVALID','GET',undefined,{Cookie})).response.status,400);
 });
-function queued(sqlite:DatabaseSync,index:number){const id=crypto.randomUUID();sqlite.prepare('INSERT INTO waitlist_signups(id,email,name,consent_version,created_at) VALUES(?,?,?,?,?)').run(id,`queue${index}@example.test`,'Queue','launch-notifications-v2',new Date(1700000000000+index*1000).toISOString());sqlite.prepare('INSERT INTO waitlist_email_jobs(id,signup_id,payload) VALUES(?,?,?)').run(id,id,JSON.stringify(waitingListEmails({name:'Queue',surname:String(index),phone:'+27821234567',email:`queue${index}@example.test`,interest:'Everyone',productId:''})));return id;}
-test('concurrent senders cap reservations at 100 emails and carry untouched entries to the next UTC day',async()=>{
- const {env,sqlite}=setup();for(let i=0;i<55;i++)queued(sqlite,i);let sent=0;
- const send=(async()=>{sent++;return Response.json({data:[{id:'owner'},{id:'customer'}]});}) as typeof fetch;
- const mailEnv={...env,RESEND_API_KEY:'test-key'};
- await Promise.all(Array.from({length:8},()=>sendWaitlistEmails(mailEnv,undefined,send)));
- // Workers may observe the same candidate window; drain remaining windows.
- for(let i=0;i<6;i++)await sendWaitlistEmails(mailEnv,undefined,send);
- assert.equal(sent,50);assert.equal((sqlite.prepare('SELECT reserved FROM waitlist_email_budget').get() as any).reserved,100);
- const waiting=sqlite.prepare("SELECT first_attempt,attempts FROM waitlist_email_jobs WHERE status='pending'").all();assert.equal(waiting.length,5);assert.ok(waiting.every((r:any)=>r.first_attempt===0&&r.attempts===0));
- sqlite.exec("UPDATE waitlist_email_budget SET day='2000-01-01'");await sendWaitlistEmails(mailEnv,undefined,send);assert.equal(sent,55);assert.equal((sqlite.prepare("SELECT reserved FROM waitlist_email_budget WHERE day=strftime('%Y-%m-%d','now')").get() as any).reserved,10);
+test('signup deletion cascades queued provider messages without refunding reserved allowance',async()=>{
+ await enqueue(1);const job=await rpc('claim',{provider:'resend'});const Cookie=await login();await call(`/api/waitlist/admin/${job.signup_id}`,'DELETE',{}, {Cookie});assert.equal((await sql('select count(*) n from public.ea_waitlist_jobs'))[0].n,0);assert.equal((await sql('select reserved from public.ea_waitlist_budget'))[0].reserved,1);
 });
-test('new signup cannot bypass older queued signups and deletion cannot replenish the daily allowance',async()=>{
- const {env,sqlite}=setup();const first=queued(sqlite,0),last=queued(sqlite,1);const subjects:string[]=[];
- sqlite.prepare("INSERT INTO waitlist_email_budget(day,reserved) VALUES(strftime('%Y-%m-%d','now'),98)").run();
- await sendWaitlistEmails({...env,RESEND_API_KEY:'test-key'},last,(async(_url:any,init:RequestInit)=>{subjects.push(JSON.parse(init.body as string)[0].subject);return Response.json({data:[{id:'a'},{id:'b'}]});}) as typeof fetch);
- assert.deepEqual(subjects,['Join Waiting List - Queue 0']);sqlite.prepare('DELETE FROM waitlist_signups WHERE id=?').run(first);assert.equal((sqlite.prepare('SELECT reserved FROM waitlist_email_budget').get() as any).reserved,100);
+test('Postgres grants and RLS block anon/authenticated access to contact records and privileged RPC',async()=>{
+ await enqueue(1);
+ for(const role of ['anon','authenticated']){
+  await db.exec(`reset role;set role ${role}`);
+  await assert.rejects(sql('select * from public.ea_waitlist_signups'),/permission denied/);await assert.rejects(rpc('list'),/permission denied/);
+ }
+ await db.exec('reset role;set role service_role');
+ const tables=await sql("select relrowsecurity,relforcerowsecurity from pg_class where relname like 'ea_waitlist_%' and relkind='r'");assert.equal(tables.length,5);assert.ok(tables.every(r=>r.relrowsecurity&&r.relforcerowsecurity));
 });
-test('provider quota exhaustion pauses all sending without losing a rejected first attempt',async()=>{
- const {env,sqlite}=setup();queued(sqlite,0);queued(sqlite,1);let calls=0;const mailEnv={...env,RESEND_API_KEY:'test-key'};
- const send=(async()=>{calls++;return Response.json({name:'daily_quota_exceeded',message:'private provider data'},{status:429});}) as typeof fetch;
- await sendWaitlistEmails(mailEnv,undefined,send);await sendWaitlistEmails(mailEnv,undefined,send);assert.equal(calls,1);
- assert.equal((sqlite.prepare("SELECT COUNT(*) n FROM waitlist_email_jobs WHERE status='pending' AND first_attempt=0").get() as any).n,2);
- assert.ok((sqlite.prepare('SELECT paused_until FROM waitlist_email_control').get() as any).paused_until>Date.now());
+test('transaction rolls back the signup if either queued payload is missing',async()=>{
+ await assert.rejects(rpc('signup',{email:'broken@example.test',name:'B',surname:'E',phone:'+27821234567',country_iso:'ZA',calling_code:'27',gender:'',age_band:'',adult_contact:true,guardian:false,interest:'Everyone',product_id:'',consent_version:'v3',confirmation:{}}));assert.equal((await sql('select count(*) n from public.ea_waitlist_signups'))[0].n,0);
+});
+test('100 confirmations fit the daily quota, overflow waits untouched and resumes next day',async()=>{
+ for(let i=0;i<102;i++)await enqueue(i);
+ for(let i=0;i<100;i++){await unlock();const job=await rpc('claim',{provider:'resend'});assert.ok(job);await rpc('finish',{id:job.id,lease:job.lease,outcome:'submitted'});}
+ await unlock();assert.equal(await rpc('claim',{provider:'resend'}),null);assert.equal((await sql('select reserved from public.ea_waitlist_budget'))[0].reserved,100);
+ assert.equal((await sql("select count(*) n from public.ea_waitlist_jobs where provider='resend' and first_attempt is null"))[0].n,2);
+ await db.exec("update public.ea_waitlist_budget set day='2000-01-01'");assert.ok(await rpc('claim',{provider:'resend'}));
+ await unlock();assert.ok(await rpc('claim',{provider:'formsubmit'}));assert.equal((await sql("select reserved from public.ea_waitlist_budget where day=(now() at time zone 'UTC')::date"))[0].reserved,1);
+});
+test('competing claims are paced and preserve FIFO and leases prevent stale acknowledgements',async()=>{
+ await enqueue(1);await enqueue(2);const jobs=await Promise.all([rpc('claim',{provider:'resend'}),rpc('claim',{provider:'resend'})]);assert.equal(jobs.filter(Boolean).length,1);const job=jobs.find(Boolean);assert.equal(job.payload.to[0],'person1@example.test');
+ assert.equal((await rpc('finish',{id:job.id,lease:crypto.randomUUID(),outcome:'submitted'})).updated,false);
+});
+test('FormSubmit sends the team request; Resend sends one branded customer message',async()=>{
+ await enqueue(1);const requests:{url:string;body:any;headers:Headers}[]=[];
+ await sendWaitlistEmails({...env,RESEND_API_KEY:'test-resend',FORMSUBMIT_ENABLED:'true'},undefined,(async(url:any,init:RequestInit)=>{requests.push({url:String(url),body:JSON.parse(init.body as string),headers:new Headers(init.headers)});return Response.json(String(url).includes('formsubmit.co')?{success:'true'}:{id:'confirmation-id'});}) as typeof fetch);
+ assert.equal(requests.length,2);assert.equal(requests[0].url,'https://formsubmit.co/ajax/1exclusiveapparel%40gmail.com');assert.equal(requests[0].body._subject,'Join Waiting List - Buyer Person 1');assert.equal(requests[0].headers.has('Authorization'),false);
+ assert.equal(requests[1].url,'https://api.resend.com/emails');assert.deepEqual(requests[1].body.to,['person1@example.test']);assert.equal(requests[1].body.from,'Exclusive Apparel <noreply@exclusive-apparel.co.za>');assert.ok(requests[1].body.html.includes('/email-logo.png'));assert.ok(requests[1].body.html.includes('Exclusive Apparel × T.s Industries'));assert.ok(requests[1].headers.has('Idempotency-Key'));
+ assert.equal((await sql('select reserved from public.ea_waitlist_budget'))[0].reserved,1);
+});
+test('ambiguous FormSubmit delivery is not blindly retried; Resend retries retain key and payload',async()=>{
+ await enqueue(1);const requests:{url:string;body:any;key:string|null}[]=[];
+ const send=(async(url:any,init:RequestInit)=>{requests.push({url:String(url),body:init.body,key:new Headers(init.headers).get('Idempotency-Key')});throw new Error('unknown transport outcome');}) as typeof fetch;
+ await sendWaitlistEmails({...env,RESEND_API_KEY:'test',FORMSUBMIT_ENABLED:'true'},undefined,send);
+ assert.equal((await sql("select status from public.ea_waitlist_jobs where provider='formsubmit'"))[0].status,'review');
+ await unlock();await db.exec("update public.ea_waitlist_jobs set next_attempt=now() where provider='resend'");await sendWaitlistEmails({...env,RESEND_API_KEY:'test',FORMSUBMIT_ENABLED:'true'},undefined,send);
+ assert.equal(requests.filter(r=>r.url.includes('formsubmit')).length,1);assert.equal(requests[1].body,requests[2].body);assert.equal(requests[1].key,requests[2].key);
+ await unlock();await db.exec("update public.ea_waitlist_jobs set first_attempt=now()-interval '24 hours',next_attempt=now() where provider='resend'");assert.equal(await rpc('claim',{provider:'resend'}),null);assert.equal((await sql("select status from public.ea_waitlist_jobs where provider='resend'"))[0].status,'review');
+});
+test('provider quota failures pause confirmations without marking an untouched signup as delivered',async()=>{
+ await enqueue(1);await sendWaitlistEmails({...env,RESEND_API_KEY:'test'},undefined,(async()=>Response.json({name:'daily_quota_exceeded'},{status:429})) as typeof fetch);
+ const [row]=await sql("select * from public.ea_waitlist_jobs where provider='resend'");assert.equal(row.status,'pending');assert.equal(row.first_attempt,null);assert.equal(await rpc('claim',{provider:'resend'}),null);
+});
+test('template escapes customer input and prelaunch continues blocking sales',()=>{
+ const person={name:'<img src=x>',surname:'E',phone:'+27821234567',email:'buyer@example.test',interest:'Everyone',productId:''};assert.ok(waitingListConfirmation(person).html!.includes('&lt;img src=x&gt;'));
+ for(const path of ['/api/checkout','/api/admin/products','/api/orders'])assert.equal(prelaunchResponse(new Request('https://store.test'+path),{})!.status,409);
+});
+test('legacy import preserves earlier consent without inventing demographics or resending emails',async()=>{
+ const old={email:'old@example.test',name:'Old',surname:'Subscriber',phone:'+263772123456',country_iso:'ZW',calling_code:'263',interest:'Everyone',product_id:'',consent_version:'launch-notifications-v2',created_at:'2026-10-01T12:00:00Z'};
+ assert.equal((await rpc('import_legacy',{rows:[old]})).imported,1);assert.equal((await rpc('import_legacy',{rows:[old]})).imported,0);assert.equal((await sql('select count(*) n from public.ea_waitlist_jobs'))[0].n,0);
+ const data=await rpc('list');assert.equal(data.signups[0].legacy,true);assert.equal(data.signups[0].adult_contact,false);assert.equal(data.signups[0].gender,'');assert.equal(data.signups[0].email_status,'legacy');assert.equal(data.signups[0].consent_version,'launch-notifications-v2');
 });

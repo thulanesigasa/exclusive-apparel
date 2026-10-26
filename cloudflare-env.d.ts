@@ -3,6 +3,9 @@ declare namespace Cloudflare {
     DB?: D1Database;
     ASSETS?: Fetcher;
     SUPABASE_URL?: string;
+    SUPABASE_SERVICE_ROLE_KEY?: string;
+    FORMSUBMIT_ENABLED?: string;
+    FORMSUBMIT_TOKEN?: string;
     SUPABASE_PUBLISHABLE_KEY?: string;
     AUTH_SESSION_KEY?: string;
     CUSTOMER_AUTH_READY?: string;
