@@ -16,6 +16,7 @@ declare namespace Cloudflare {
     PAYFAST_PASSPHRASE?: string;
     PAYFAST_SANDBOX?: string;
     RESEND_API_KEY?: string;
+    WAITLIST_SITE_URL?: string;
     EMAIL_FROM?: string;
     BUCKET?: R2Bucket;
   }

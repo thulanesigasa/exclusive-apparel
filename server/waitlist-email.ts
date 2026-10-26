@@ -1,0 +1,29 @@
+export type WaitlistEmailEnv={DB?:D1Database;RESEND_API_KEY?:string;WAITLIST_SITE_URL?:string};
+const FROM='Exclusive Apparel <noreply@exclusive-apparel.co.za>';
+const OWNER='1exclusiveapparel@gmail.com';
+import {WAITLIST_MESSAGE} from '../lib/waitlist-copy';
+const escape=(value:string)=>value.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
+export function waitingListEmails(person:{name:string;surname:string;phone:string;email:string;interest:string;productId:string},site='https://exclusive-apparel.co.za'){
+ const url=new URL(site);if(url.protocol!=='https:')throw new Error('Email website URL must use HTTPS');const origin=url.origin;
+ const fullName=`${person.name} ${person.surname}`;
+ const text=`Hi ${person.name},\n\nYou're on the Exclusive Apparel waiting list. Thank you for being part of what's coming.\n\nWe'll email you as soon as our apparel launches, with collection availability, prices and all the details you need. There's nothing to pay now, and joining does not reserve an item.\n\nKind regards,\nExclusive Apparel × T.s Industries\n\nTo leave the waiting list or correct your details, contact ${OWNER} or visit ${origin}/contact/.`;
+ const html=`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body style="margin:0;background:#f7f6f2;color:#1c211d;font-family:Arial,Helvetica,sans-serif"><div style="display:none;max-height:0;overflow:hidden">You're on the list. Your everyday is coming.</div><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center" style="padding:28px 16px"><table role="presentation" width="560" cellspacing="0" cellpadding="0" style="width:100%;max-width:560px;background:#f7f6f2"><tr><td style="padding:32px;background:#1c211d;color:#f7f6f2"><p style="font-size:12px;letter-spacing:3px;margin:0 0 20px">EXCLUSIVE APPAREL</p><h1 style="font-size:38px;line-height:1.1;margin:0">Your everyday.<br>Coming soon.</h1></td></tr><tr><td style="padding:32px;line-height:1.7;font-size:16px"><p>Hi ${escape(person.name)},</p><h2 style="font-size:26px;line-height:1.2">You're on the list.</h2><p>Thank you for joining the Exclusive Apparel waiting list. We’re excited to have you with us.</p><p>We’ll email you as soon as our apparel launches, with collection availability, prices and all the details you need.</p><p style="font-size:14px;color:#6f746d">There’s nothing to pay now. Joining the list does not reserve an item.</p><p style="margin:28px 0"><a href="${escape(origin)}/shop/" style="display:inline-block;padding:14px 24px;background:#1c211d;color:#f7f6f2;text-decoration:none">Explore the collection ↗</a></p><p>Kind regards,<br><strong>Exclusive Apparel × T.s Industries</strong></p><img src="${escape(origin)}/email-logo.png" alt="Exclusive Apparel" width="112" style="display:block;width:112px;max-width:100%;height:auto;margin-top:20px"></td></tr><tr><td style="padding:24px 32px;background:#d7deca;font-size:12px;line-height:1.6">You received this confirmation because your email was submitted to our waiting list. If this wasn’t you, or you’d like to leave, <a href="${escape(origin)}/contact/" style="color:#1c211d">contact us</a> or reply to this email. <a href="${escape(origin)}/privacy/" style="color:#1c211d">Privacy policy</a>.</td></tr></table></td></tr></table></body></html>`;
+ return [{from:FROM,to:[OWNER],reply_to:person.email,subject:`Join Waiting List - ${fullName}`,text:`${WAITLIST_MESSAGE}\n\nName: ${person.name}\nSurname: ${person.surname}\nCellphone: ${person.phone}\nEmail: ${person.email}\nCollection: ${person.interest}\nPreview item: ${person.productId||'None selected'}\n\nThe signup has been saved in the website waiting list.`},{from:FROM,to:[person.email],reply_to:OWNER,subject:`You're on the list, ${person.name} | Exclusive Apparel`,text,html}];
+}
+// Durable payloads keep retries byte-for-byte identical. Resend deduplicates for 24h;
+// stop after 23h from the first attempt so an ambiguous delivery is never blindly replayed.
+export async function sendWaitlistEmails(env:WaitlistEmailEnv,signupId?:string,send:typeof fetch=fetch){
+ if(!env.DB||!env.RESEND_API_KEY)return;
+ const db=env.DB,now=Date.now();
+ await db.prepare("UPDATE waitlist_email_jobs SET status='review' WHERE status='pending' AND first_attempt>0 AND first_attempt<?").bind(now-23*3600000).run();
+ const jobs=await db.prepare(`SELECT id FROM waitlist_email_jobs WHERE status='pending' AND next_attempt<=? ${signupId?'AND signup_id=?':''} ORDER BY next_attempt LIMIT 10`).bind(...(signupId?[now,signupId]:[now])).all<{id:string}>();
+ for(const job of jobs.results){
+  const claimed=await db.prepare("UPDATE waitlist_email_jobs SET next_attempt=?,first_attempt=CASE WHEN first_attempt=0 THEN ? ELSE first_attempt END,attempts=attempts+1 WHERE id=? AND status='pending' AND next_attempt<=? RETURNING payload").bind(Date.now()+300000,Date.now(),job.id,Date.now()).first<{payload:string}>();
+  if(!claimed)continue;
+  try{
+   const response=await send('https://api.resend.com/emails/batch',{method:'POST',headers:{Authorization:`Bearer ${env.RESEND_API_KEY}`,'Content-Type':'application/json','Idempotency-Key':`waitlist/${job.id}`},body:claimed.payload,signal:AbortSignal.timeout(10000)});
+   if(response.ok){const result=await response.json() as {data?:{id:string}[]};if(!Array.isArray(result.data)||result.data.length!==2||!result.data.every(row=>typeof row.id==='string'))throw new Error('Invalid delivery acknowledgement');await db.prepare("UPDATE waitlist_email_jobs SET status='submitted',last_error='' WHERE id=?").bind(job.id).run();}
+   else {await db.prepare('UPDATE waitlist_email_jobs SET last_error=? WHERE id=?').bind(`Provider HTTP ${response.status}`,job.id).run();}
+  }catch{await db.prepare("UPDATE waitlist_email_jobs SET last_error='Delivery acknowledgement unavailable' WHERE id=?").bind(job.id).run();}
+ }
+}
