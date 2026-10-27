@@ -6,7 +6,7 @@ export const capPhotos=[...assets.map(asset=>({src:`/photos/caps/${asset.file}`,
 export const capMain=capPhotos.find(p=>p.src.endsWith('/adult-1.webp'))!;
 export const apparelPhotos=apparelAssets.map(asset=>({...asset,src:`/photos/apparel/${asset.file}`,small:`/photos/apparel/${asset.file.replace('.webp','-384.webp')}`}));
 export const productPhotoGroups:Record<string,string>={'signature-tee':'men-tees','boxy-tee':'women-tees','junior-tee':'kids-tees','crown-beanie':'beanies','relaxed-sweatpants':'sweatpants','track-pants':'trackpants'};
-export const collectionPhotos={Men:lifestylePhotos.find(p=>p.file==='men-street.webp')!,Women:lifestylePhotos.find(p=>p.file==='women-bench.webp')!,Kids:apparelPhotos.find(p=>p.file==='kids-tees-3.webp')!};
+export const collectionPhotos={Men:capPhotos.find(p=>p.src.endsWith('/adult-2.webp'))!,Women:capPhotos.find(p=>p.src.endsWith('/women-1.webp'))!,Kids:apparelPhotos.find(p=>p.file==='kids-tees-3.webp')!};
 export const collectionProducts={Men:'everyday-cap',Women:'everyday-cap',Kids:'junior-tee'};
 export function photoDetails(src:string){return [...capPhotos,...apparelPhotos].find(p=>p.src===src);}
 /** Upgrade legacy demo media without overwriting photographs uploaded by the owner. */
