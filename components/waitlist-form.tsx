@@ -5,11 +5,11 @@ import {ArrowUpRight,Check} from 'lucide-react';
 import {WAITLIST_MESSAGE} from '../lib/waitlist-copy';
 import {countries,genders,ageBands,normalizePhone} from '../lib/waitlist-demographics';
 export function WaitlistForm({productId='',productName=''}:{productId?:string;productName?:string}){
- const id=useId(),[busy,setBusy]=useState(false),[done,setDone]=useState(false),[error,setError]=useState(''),[country,setCountry]=useState('ZA'),[phone,setPhone]=useState(''),[age,setAge]=useState('');
+ const id=useId(),[busy,setBusy]=useState(false),[done,setDone]=useState(false),[error,setError]=useState(''),[country,setCountry]=useState('ZA'),[phone,setPhone]=useState(''),[age,setAge]=useState(''),[step,setStep]=useState<1|2>(1);
  let formatted='';try{if(phone)formatted=normalizePhone(phone,country).phone;}catch{}
  const minor=['0-12','13-17'].includes(age);
  async function submit(event:React.FormEvent<HTMLFormElement>){
-  event.preventDefault();if(busy)return;const form=event.currentTarget,data=new FormData(form);setBusy(true);setError('');
+  event.preventDefault();if(busy)return;setError('');if(step===1){try{normalizePhone(phone,country);setStep(2);}catch(error){setError(error instanceof Error?error.message:'Enter a valid phone number.');}return;}const form=event.currentTarget,data=new FormData(form);setBusy(true);
   try{
    const normalized=normalizePhone(phone,country);
    const response=await fetch('/api/waitlist',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:data.get('email'),name:data.get('name'),surname:data.get('surname'),phone:normalized.phone,country,gender:data.get('gender'),ageBand:age,adultContact:data.get('adultContact')==='on',guardian:data.get('guardian')==='on',interest:data.get('interest'),website:data.get('website'),consent:data.get('consent')==='on',productId}),signal:AbortSignal.timeout(20000)});
@@ -19,6 +19,8 @@ export function WaitlistForm({productId='',productName=''}:{productId?:string;pr
  if(done)return <div className="waitlist-success" role="status" tabIndex={-1}><Check size={30}/><h3>You’re on our radar.</h3><p>Thank you. If your email wasn’t already on the list, it has now been added. New signups receive a confirmation email. When our daily allowance is reached, confirmations are queued for a following day in signup order. Your place is already saved.</p><p>Check your spam folder too. No account, order or payment has been created.</p><Link className="text-link" href="/shop/">Keep exploring ↗</Link></div>;
  return <form className="waitlist-form" onSubmit={submit} aria-describedby={error?`${id}-error`:`${id}-privacy`} aria-busy={busy}>
   {productName&&<p className="waitlist-interest">Your pick: <strong>{productName}</strong></p>}
+  <div className="waitlist-progress" aria-live="polite"><span>STEP {step} OF 2</span><strong>{step===1?"Your contact details":"Your preferences"}</strong><div className="waitlist-progress-track" aria-hidden="true"><span style={{width:step===1?"50%":"100%"}}/></div></div>
+  <fieldset className="waitlist-step" hidden={step!==1}><legend className="sr-only">Your contact details</legend>
   <p className="waitlist-privacy">Use your own adult contact details. If you’re shopping for a child, a parent or guardian should complete this form.</p>
   <div className="waitlist-fields">
    <label htmlFor={`${id}-name`}>First name<input id={`${id}-name`} name="name" required autoComplete="given-name" maxLength={100} placeholder="Your first name" disabled={busy}/></label>
@@ -28,6 +30,8 @@ export function WaitlistForm({productId='',productName=''}:{productId?:string;pr
   </div>
   <p id={`${id}-phone-help`} className="waitlist-privacy" aria-live="polite">{formatted?`We’ll save: ${formatted}`:'We format your number with the selected country code and remove a local dialling zero where appropriate.'}</p>
   <label htmlFor={`${id}-email`}>Email address<input id={`${id}-email`} name="email" type="email" required autoComplete="email" maxLength={254} placeholder="you@example.com" disabled={busy}/></label>
+  </fieldset>
+  <fieldset className="waitlist-step" hidden={step!==2}><legend className="sr-only">Your preferences and consent</legend>
   <fieldset className="waitlist-demographics"><legend>Who are you shopping for? <span>(optional)</span></legend><p className="waitlist-privacy">Tell us about the intended wearer so we can plan our collection. For children, use your contact details above and their age range here. No child’s name or exact birthday is needed.</p><div className="waitlist-fields">
    <label htmlFor={`${id}-gender`}>Gender<select id={`${id}-gender`} name="gender" defaultValue="" disabled={busy}><option value="">Not provided</option>{genders.map(g=><option key={g}>{g}</option>)}</select></label>
    <label htmlFor={`${id}-age`}>Age range<select id={`${id}-age`} name="ageBand" value={age} onChange={e=>setAge(e.target.value)} disabled={busy}><option value="">Not provided</option>{ageBands.map(a=><option key={a.value} value={a.value}>{a.label}</option>)}</select></label>
@@ -35,10 +39,11 @@ export function WaitlistForm({productId='',productName=''}:{productId?:string;pr
   <label htmlFor={`${id}-interest`}>What are you looking forward to?<select id={`${id}-interest`} name="interest" defaultValue="Everyone" disabled={busy}><option value="Everyone">A bit of everything</option><option value="Men">Men’s collection</option><option value="Women">Women’s collection</option><option value="Kids">Kids’ collection</option></select></label>
   <p className="waitlist-privacy"><strong>Your message</strong><br/>{WAITLIST_MESSAGE}</p>
   <div className="waitlist-honeypot" aria-hidden="true"><label>Leave this field empty<input name="website" tabIndex={-1} autoComplete="off"/></label></div>
-  <label className="waitlist-consent"><input type="checkbox" name="adultContact" required disabled={busy}/><span>I am 18 or older and these are my own contact details.</span></label>
-  {minor&&<label className="waitlist-consent"><input type="checkbox" name="guardian" required disabled={busy}/><span>I am the parent or guardian joining for this child.</span></label>}
-  <label className="waitlist-consent"><input type="checkbox" name="consent" required disabled={busy}/><span>I agree to receive Exclusive Apparel launch and availability updates by email.</span></label>
+  <label className="waitlist-consent"><input type="checkbox" name="adultContact" required={step===2} disabled={busy}/><span>I am 18 or older and these are my own contact details.</span></label>
+  {minor&&<label className="waitlist-consent"><input type="checkbox" name="guardian" required={step===2} disabled={busy}/><span>I am the parent or guardian joining for this child.</span></label>}
+  <label className="waitlist-consent"><input type="checkbox" name="consent" required={step===2} disabled={busy}/><span>I agree to receive Exclusive Apparel launch and availability updates by email.</span></label>
   <p id={`${id}-privacy`} className="waitlist-privacy">We save your signup securely and send your contact request to our team using FormSubmit. Resend sends your confirmation. Optional gender and age details stay in our database for collection planning. No promotional calls or SMS. See our <Link href="/privacy/">privacy policy</Link>. Ask to leave through <Link href="/contact/">Contact us</Link>. Joining is free and doesn’t reserve an item.</p>
-  {error&&<p id={`${id}-error`} className="error" role="alert">{error}</p>}<button className="button dark waitlist-submit" disabled={busy} type="submit">{busy?'Adding you…':'Join the waiting list'}<ArrowUpRight size={18}/></button>
+  </fieldset>
+  {error&&<p id={`${id}-error`} className="error" role="alert">{error}</p>}{step===2&&<button className="button outline waitlist-back" type="button" disabled={busy} onClick={()=>{setError('');setStep(1);}}>← Back to contact details</button>}<button className="button dark waitlist-submit" disabled={busy} type="submit">{busy?'Adding you…':step===1?'Continue':'Join the waiting list'}<ArrowUpRight size={18}/></button>
  </form>;
 }
