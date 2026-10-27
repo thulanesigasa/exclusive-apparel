@@ -4,6 +4,7 @@ import {waitingListConfirmation,sendWaitlistEmails,formsubmitNotification,type W
 import {createHash,createHmac,randomBytes,timingSafeEqual} from 'node:crypto';
 import {boundedBody} from './request-body';
 import products from '../lib/products.json';
+import {waitlistWorkbook} from './waitlist-workbook';
 export type WaitlistEnv=WaitlistEmailEnv & {WAITLIST_ADMIN_SECRET?:string};
 const COOKIE='__Host-exclusive-waitlist-admin';
 export const CONSENT_VERSION='launch-notifications-v3';
@@ -51,7 +52,7 @@ export async function waitlist(request:Request,env:WaitlistEnv,background?:(task
   const {limit,offset}=pagination(url),country=url.searchParams.get('country')||'',gender=url.searchParams.get('gender')||'',age=url.searchParams.get('age')||'';
   if(country&&!countries.some(c=>c.iso===country)||gender&&!genders.includes(gender as any)||age&&!ageBands.some(a=>a.value===age))throw new Failure(400,'Invalid demographic filter.');
   const data=await waitlistRpc(env,'list',{limit,offset,country,gender,age});
-  if(path.endsWith('/export')){const fields=['number','name','surname','phone','country_iso','calling_code','email','gender','age_band','email_status','notification_status','interest','product_id','created_at','consent_version'];const csv=[fields.map(csvCell).join(','),...data.signups.map((row:any,index:number)=>fields.map(field=>csvCell(field==='number'?offset+index+1:row[field])).join(','))].join('\r\n');return new Response('\ufeff'+csv,{headers:{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':'attachment; filename="exclusive-apparel-waitlist-page.csv"','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}});}
+  if(path.endsWith('/export')){if(url.searchParams.get('format')==='xlsx'){const bytes=waitlistWorkbook(data.signups,offset);return new Response(bytes as unknown as BodyInit,{headers:{'Content-Type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','Content-Disposition':'attachment; filename="exclusive-apparel-waitlist-page.xlsx"','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}});}const fields=['number','name','surname','phone','country_iso','calling_code','email','gender','age_band','email_status','notification_status','interest','product_id','created_at','consent_version'];const csv=[fields.map(csvCell).join(','),...data.signups.map((row:any,index:number)=>fields.map(field=>csvCell(field==='number'?offset+index+1:row[field])).join(','))].join('\r\n');return new Response('\ufeff'+csv,{headers:{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':'attachment; filename="exclusive-apparel-waitlist-page.csv"','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}});}
   return reply({...data,emailConfigured:Boolean(env.RESEND_API_KEY),formsubmitConfigured:env.FORMSUBMIT_ENABLED==='true'});
  }
  if(/^\/api\/waitlist\/admin\/[a-f0-9-]{36}$/.test(path)&&request.method==='DELETE'){await waitlistRpc(env,'remove',{id:path.split('/').pop()});return reply({removed:true});}
