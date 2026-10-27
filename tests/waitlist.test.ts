@@ -14,6 +14,7 @@ async function sql(query:string,args:any[]=[]){return (await db.query<any>(query
 before(async()=>{
  await db.exec('create role anon; create role authenticated; create role service_role bypassrls;');
  await db.exec(readFileSync('supabase/migrations/20261026162545_waitlist_demographics_and_delivery.sql','utf8'));
+ await db.exec(readFileSync('supabase/migrations/20261027093804_waitlist_unique_phone.sql','utf8'));
  globalThis.fetch=(async(input:RequestInfo|URL,init?:RequestInit)=>{
   const url=String(input);assert.equal(url,'https://database.example.test/rest/v1/rpc/ea_waitlist_service');assert.equal(new Headers(init?.headers).get('apikey'),env.SUPABASE_SERVICE_ROLE_KEY);
   const {action,data}=JSON.parse(init!.body as string);try{return Response.json(await rpc(action,data));}catch{return Response.json({error:'database failure'},{status:500});}
@@ -23,7 +24,7 @@ after(async()=>{globalThis.fetch=originalFetch;await db.close();});
 beforeEach(async()=>{await db.exec("reset role;truncate public.ea_waitlist_signups,public.ea_waitlist_jobs,public.ea_waitlist_budget,public.ea_waitlist_limits restart identity cascade;update public.ea_waitlist_control set paused_until='-infinity',next_request_at='-infinity';set role service_role;");});
 async function call(path='/api/waitlist',method='POST',data:any=signup(),headers:Record<string,string>={},config=env){const response=(await waitlist(new Request('https://store.test'+path,{method,headers:{Origin:'https://store.test','Content-Type':'application/json','cf-connecting-ip':'192.0.2.1',...headers},...(method==='GET'?{}:{body:JSON.stringify(data)})}),config))!;return {response,data:response.headers.get('Content-Type')?.includes('application/json')?await response.clone().json() as any:await response.clone().text()};}
 async function login(){const result=await call('/api/waitlist/admin/session','POST',{password:env.WAITLIST_ADMIN_SECRET});assert.equal(result.response.status,200);return result.response.headers.get('Set-Cookie')!.split(';')[0];}
-async function enqueue(index:number,changes:Record<string,unknown>={}){const person={name:'Buyer',surname:`Person ${index}`,email:`person${index}@example.test`,phone:'+27821234567',interest:'Everyone',productId:''};await rpc('signup',{...person,...normalizePhone(person.phone,'ZA'),gender:'Female',age_band:'24+',adult_contact:true,guardian:false,product_id:'',consent_version:'launch-notifications-v3',confirmation:waitingListConfirmation(person),notification:formsubmitNotification(person),...changes});}
+async function enqueue(index:number,changes:Record<string,unknown>={}){const person={name:'Buyer',surname:`Person ${index}`,email:`person${index}@example.test`,phone:'+2782'+String(1234000+index),interest:'Everyone',productId:''};await rpc('signup',{...person,...normalizePhone(person.phone,'ZA'),gender:'Female',age_band:'24+',adult_contact:true,guardian:false,product_id:'',consent_version:'launch-notifications-v3',confirmation:waitingListConfirmation(person),notification:formsubmitNotification(person),...changes});}
 async function unlock(){await db.exec("update public.ea_waitlist_control set next_request_at='-infinity'");}
 
 test('normalizes domestic/international phones and rejects mismatched country and invalid input',()=>{
@@ -36,10 +37,14 @@ test('age groups do not overlap; optional demographics and guardian confirmation
  assert.throws(()=>demographicFields({adultContact:true,ageBand:'13-17'}));assert.throws(()=>demographicFields({adultContact:false}));assert.throws(()=>demographicFields({adultContact:true,ageBand:'18-20'}));assert.throws(()=>demographicFields({adultContact:true,gender:'injected'}));
  assert.equal(demographicFields({adultContact:true,ageBand:'0-12',guardian:true}).guardian,true);
 });
-test('signup atomically saves normalized data and two distinct providers without revealing duplicates',async()=>{
- const first=await call(undefined,undefined,signup('Buyer@Example.Test'));const duplicate=await call(undefined,undefined,{...signup(),name:'Overwrite'});assert.equal(first.response.status,202);assert.deepEqual(first.data,duplicate.data);
+test('signup atomically rejects duplicate email or phone and creates no extra messages',async()=>{
+ const first=await call(undefined,undefined,signup('Buyer@Example.Test'));const duplicate=await call(undefined,undefined,{...signup(),name:'Overwrite'});assert.equal(first.response.status,202);assert.equal(duplicate.response.status,409);assert.match(duplicate.data.error,/already on the waiting list/);const phoneDuplicate=await call(undefined,undefined,signup('different@example.test'));assert.equal(phoneDuplicate.response.status,409);
  const [row]=await sql('select * from public.ea_waitlist_signups');assert.equal(row.email,'buyer@example.test');assert.equal(row.name,'Buyer');assert.equal(row.phone,'+27821234567');assert.equal(row.country_iso,'ZA');assert.equal(row.gender,'Female');assert.equal(row.age_band,'20-23');assert.equal(row.consent_version,'launch-notifications-v3');
  const jobs=await sql('select provider,payload from public.ea_waitlist_jobs order by provider');assert.equal(jobs.length,2);assert.equal(jobs[0].payload._subject,'Join Waiting List - Buyer Example');assert.deepEqual(jobs[1].payload.to,['buyer@example.test']);assert.ok(!('gender' in jobs[0].payload));assert.ok(!JSON.stringify(first.data).includes(row.email));
+});
+test('concurrent signups sharing a normalized phone create only one signup and one set of email jobs',async()=>{
+ const results=await Promise.all([call(undefined,undefined,signup('first@example.test')),call(undefined,undefined,signup('second@example.test'))]);
+ assert.deepEqual(results.map(r=>r.response.status).sort(),[202,409]);assert.equal((await sql('select count(*) n from public.ea_waitlist_signups'))[0].n,1);assert.equal((await sql('select count(*) n from public.ea_waitlist_jobs'))[0].n,2);
 });
 test('public form validates consent, guardian, email, body size, country, product, content type and origin',async()=>{
  for(const change of [{consent:false},{adultContact:false},{ageBand:'0-12'},{email:'x@@a.test'},{country:'XX'},{productId:'heavyweight-tee'},{surname:'x\r\nBcc:attack'},{phone:'abc'}])assert.equal((await call(undefined,undefined,{...signup(),...change})).response.status,400);
@@ -102,7 +107,7 @@ test('FormSubmit sends the team request; Resend sends one branded customer messa
  await enqueue(1);const requests:{url:string;body:any;headers:Headers}[]=[];
  await sendWaitlistEmails({...env,RESEND_API_KEY:'test-resend',FORMSUBMIT_ENABLED:'true'},undefined,(async(url:any,init:RequestInit)=>{requests.push({url:String(url),body:JSON.parse(init.body as string),headers:new Headers(init.headers)});return Response.json(String(url).includes('formsubmit.co')?{success:'true'}:{id:'confirmation-id'});}) as typeof fetch);
  assert.equal(requests.length,2);assert.equal(requests[0].url,'https://formsubmit.co/ajax/1exclusiveapparel%40gmail.com');assert.equal(requests[0].body._subject,'Join Waiting List - Buyer Person 1');assert.equal(requests[0].headers.has('Authorization'),false);
- assert.equal(requests[1].url,'https://api.resend.com/emails');assert.deepEqual(requests[1].body.to,['person1@example.test']);assert.equal(requests[1].body.from,'Exclusive Apparel <noreply@exclusive-apparel.co.za>');assert.ok(requests[1].body.html.includes('/email-logo.png'));assert.ok(requests[1].body.html.includes('Exclusive Apparel × T.s Industries'));assert.ok(requests[1].headers.has('Idempotency-Key'));
+ assert.equal(requests[1].url,'https://api.resend.com/emails');assert.deepEqual(requests[1].body.to,['person1@example.test']);assert.equal(requests[1].body.from,'Exclusive Apparel <noreply@exclusive-apparel.co.za>');assert.ok(requests[1].body.html.includes('/email-logo-transparent.png'));assert.ok(requests[1].body.html.includes('Exclusive Apparel × T.s Industries'));assert.ok(requests[1].headers.has('Idempotency-Key'));
  assert.equal((await sql('select reserved from public.ea_waitlist_budget'))[0].reserved,1);
 });
 test('ambiguous FormSubmit delivery is not blindly retried; Resend retries retain key and payload',async()=>{
@@ -119,7 +124,7 @@ test('provider quota failures pause confirmations without marking an untouched s
  const [row]=await sql("select * from public.ea_waitlist_jobs where provider='resend'");assert.equal(row.status,'pending');assert.equal(row.first_attempt,null);assert.equal(await rpc('claim',{provider:'resend'}),null);
 });
 test('template escapes customer input and prelaunch continues blocking sales',()=>{
- const person={name:'<img src=x>',surname:'E',phone:'+27821234567',email:'buyer@example.test',interest:'Everyone',productId:''};assert.ok(waitingListConfirmation(person).html!.includes('&lt;img src=x&gt;'));
+ const person={name:'<img src=x>',surname:'E',phone:'+27821234567',email:'buyer@example.test',interest:'Everyone',productId:''};assert.ok(waitingListConfirmation(person).html!.includes('&lt;img src=x&gt;'));assert.ok(!('reply_to' in waitingListConfirmation(person)));assert.ok(waitingListConfirmation(person).html.includes('email-logo-transparent.png'));
  for(const path of ['/api/checkout','/api/admin/products','/api/orders'])assert.equal(prelaunchResponse(new Request('https://store.test'+path),{})!.status,409);
 });
 test('legacy import preserves earlier consent without inventing demographics or resending emails',async()=>{

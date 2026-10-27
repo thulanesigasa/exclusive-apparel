@@ -34,7 +34,8 @@ export async function waitlist(request:Request,env:WaitlistEnv,background?:(task
   const productId=data.productId??'';if(typeof productId!=='string'||productId&&!products.some(p=>p.id===productId))throw new Failure(400,'Choose an item from the collection.');
   await limit(env,'signup-email:'+hash(email),3,60*60*1000);
   const person={name,surname,phone:phoneFields.phone,email,interest,productId};
-  await waitlistRpc(env,'signup',{email,name,surname,...phoneFields,...demographics,interest,product_id:productId,consent_version:CONSENT_VERSION,confirmation:waitingListConfirmation(person,env.WAITLIST_SITE_URL),notification:formsubmitNotification(person)});
+  const saved=await waitlistRpc(env,'signup',{email,name,surname,...phoneFields,...demographics,interest,product_id:productId,consent_version:CONSENT_VERSION,confirmation:waitingListConfirmation(person,env.WAITLIST_SITE_URL),notification:formsubmitNotification(person)});
+  if(!saved.accepted)return reply({error:'This email address or phone number is already on the waiting list. Contact us if you need to update your details.'},409);
   if(background)background(sendWaitlistEmails(env));return accepted();
  }
  if(path==='/api/waitlist/admin/session'&&request.method==='POST'){
