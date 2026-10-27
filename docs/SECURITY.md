@@ -1,3 +1,5 @@
+> **26 October update:** New waiting-list Supabase schema and service-only RPC are tested locally, including RLS/grants. The remote exclusive-apparel project is paused at the account’s active free-project limit; the new migration and hosted secret setup remain pending. Older live verification described below concerns only the earlier customer-profile schema. See [current setup](WAITLIST-LAUNCH.md).
+
 > The current pre-launch waiting-list controls and management authentication are documented in [WAITLIST-LAUNCH.md](WAITLIST-LAUNCH.md). Existing customer/Supabase/commerce controls below are retained for the future store; those public entry points are blocked in pre-launch mode.
 
 # Customer accounts and security
